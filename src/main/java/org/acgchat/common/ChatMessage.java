@@ -6,10 +6,12 @@ package org.acgchat.common;
 public class ChatMessage {
 
     private ChatMessageType type;
+    private String user;
     private String message;
 
-    public ChatMessage(ChatMessageType type, String message) {
+    public ChatMessage(ChatMessageType type, String user, String message) {
         this.type = type;
+        this.user = user;
         this.message = message;
     }
 
@@ -29,11 +31,20 @@ public class ChatMessage {
         this.message = message;
     }
 
+    public String getUser() {
+        return user;
+    }
+
+    public void setUser(String user) {
+        this.user = user;
+    }
+
     public enum ChatMessageType {
+        MESSAGE(0),
         LOGIN(1),
         REGISTER(2),
-        MESSAGE(0),
-        COMMAND(3);
+        LOGOUT(3),
+        COMMAND(4);
 
         private int id;
 
