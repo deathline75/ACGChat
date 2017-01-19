@@ -22,6 +22,10 @@ public abstract class Logger {
         log("INFO", message);
     }
 
+    public void debug(String message) {
+        log("DEBUG", message);
+    }
+
     public void chat(String message) {
         log("CHAT", message);
     }

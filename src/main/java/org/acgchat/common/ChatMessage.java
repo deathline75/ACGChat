@@ -1,9 +1,11 @@
 package org.acgchat.common;
 
+import java.io.Serializable;
+
 /**
  * Created by Kelvin on 16/1/2017.
  */
-public class ChatMessage {
+public class ChatMessage implements Serializable{
 
     private ChatMessageType type;
     private String user;
@@ -44,7 +46,9 @@ public class ChatMessage {
         LOGIN(1),
         REGISTER(2),
         LOGOUT(3),
-        COMMAND(4);
+        COMMAND(4),
+        SUCCESS(10),
+        ERROR(11);
 
         private int id;
 

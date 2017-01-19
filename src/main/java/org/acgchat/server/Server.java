@@ -22,7 +22,7 @@ import java.util.HashMap;
 /**
  * Created by NEOPETS on 18/1/2017.
  */
-public class Server extends Logger{
+public class Server extends Logger {
 
     private static int idGenerator = 0;
     private int port;
@@ -79,14 +79,11 @@ public class Server extends Logger{
     }
 
     private synchronized void broadcast(ChatMessage message) {
-        // add HH:mm:ss and \n to the message
-        String time = simpleDateFormat.format(new Date());
-        String messageLf = time + " - " + message.getMessage() + "\n";
         // display message on console or GUI
-        chat(messageLf);
+        chat(message.getUser() + ": " + message.getMessage());
         // we loop in reverse order in case we would have to remove a Client
         // because it has disconnected
-        for (ClientThread ct: clients.values()) {
+        for (ClientThread ct : clients.values()) {
             if (!ct.writeMsg(message)) {
                 remove(ct.getClientThreadId());
                 info("Disconnected Client #" + ct.getClientThreadId() + " removed from list.");
@@ -110,7 +107,6 @@ public class Server extends Logger{
         ClientThread(Socket socket) {
             this.ctid = idGenerator++;
             this.socket = socket;
-
             try {
                 final org.bouncycastle.asn1.x509.Certificate bcCert = org.bouncycastle.asn1.x509.Certificate.getInstance(ASN1TaggedObject.fromByteArray(certificate.getEncoded()));
                 tlsServerProtocol = new TlsServerProtocol(socket.getInputStream(), socket.getOutputStream(), new SecureRandom());
@@ -119,8 +115,9 @@ public class Server extends Logger{
                         return new DefaultTlsSignerCredentials(context, new org.bouncycastle.crypto.tls.Certificate(new org.bouncycastle.asn1.x509.Certificate[]{bcCert}), PrivateKeyFactory.createKey(keyPair.getPrivate().getEncoded()));
                     }
                 });
-                sInput = new ObjectInputStream(tlsServerProtocol.getInputStream());
                 sOutput = new ObjectOutputStream(tlsServerProtocol.getOutputStream());
+                sOutput.flush();
+                sInput = new ObjectInputStream(tlsServerProtocol.getInputStream());
                 running = true;
             } catch (IOException | CertificateEncodingException e) {
                 error("Unable to establish secure connection.");
@@ -134,11 +131,23 @@ public class Server extends Logger{
                 try {
                     ChatMessage chatMessage = (ChatMessage) sInput.readObject();
                     switch (chatMessage.getType()) {
-                        case MESSAGE: broadcast(chatMessage); break;
-                        case COMMAND: break;
-                        case LOGIN: break;
-                        case LOGOUT: info(chatMessage.getUser() + " has disconnected from the server.");
-                        case REGISTER: break;
+                        case MESSAGE:
+                            broadcast(chatMessage);
+                            break;
+                        case COMMAND:
+                            break;
+                        case LOGIN:
+                            break;
+                        case LOGOUT:
+                            info(chatMessage.getUser() + " has disconnected from the server.");
+                            running = false;
+                            break;
+                        case REGISTER:
+                            break;
+                        case ERROR:
+                        case SUCCESS:
+                        default:
+                            writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Invalid or unsupported message type!"));
                     }
                 } catch (IOException | ClassNotFoundException e) {
                     error("Error when receiving a new message: " + e);
@@ -149,23 +158,27 @@ public class Server extends Logger{
             close();
         }
 
-        public int getClientThreadId(){
+        public int getClientThreadId() {
             return ctid;
         }
 
         public void close() {
             try {
                 sInput.close();
-            } catch (IOException e) {}
+            } catch (IOException e) {
+            }
             try {
                 sOutput.close();
-            } catch (IOException e) {}
+            } catch (IOException e) {
+            }
             try {
                 tlsServerProtocol.close();
-            } catch (IOException e) {}
+            } catch (IOException e) {
+            }
             try {
                 socket.close();
-            } catch (IOException e) {}
+            } catch (IOException e) {
+            }
         }
 
         public boolean writeMsg(ChatMessage message) {
@@ -176,6 +189,7 @@ public class Server extends Logger{
 
             try {
                 sOutput.writeObject(message);
+                sOutput.flush();
             } catch (IOException e) {
                 error("Unable to send message: " + e);
                 e.printStackTrace();
@@ -193,7 +207,7 @@ public class Server extends Logger{
             } else if (args.length == 1 && args[0].matches("^[0-9]{1,5}$")) {
                 int port = Integer.parseInt(args[0]);
                 if (port <= 65535) {
-                    server = new Server(port, "ACGChatKeystore.pfx", "1qwer$#@!","ACGChatServerSigned","1qwer$#@!");
+                    server = new Server(port, "ACGChatKeystore.pfx", "1qwer$#@!", "ACGChatServerSigned", "1qwer$#@!");
                 }
             } else {
                 System.out.println("Usage: <filename> [port]");
