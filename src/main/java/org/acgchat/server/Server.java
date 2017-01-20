@@ -2,6 +2,7 @@ package org.acgchat.server;
 
 import org.acgchat.common.ChatMessage;
 import org.acgchat.common.Logger;
+import org.apache.commons.cli.*;
 import org.bouncycastle.asn1.ASN1TaggedObject;
 import org.bouncycastle.crypto.tls.DefaultTlsServer;
 import org.bouncycastle.crypto.tls.DefaultTlsSignerCredentials;
@@ -16,8 +17,10 @@ import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
-import java.util.Date;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by NEOPETS on 18/1/2017.
@@ -30,10 +33,37 @@ public class Server extends Logger {
     private Certificate certificate;
     private boolean keepGoing = true;
     private HashMap<Integer, ClientThread> clients;
+    private File credentials;
+    private ConcurrentHashMap<String, String> users;
 
-    protected Server(int port, String keystorePath, String keystorePassword, String alias, String aliasPassword) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
+    protected Server(int port, String credentialPath, String keystorePath, String keystorePassword, String alias, String aliasPassword) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
         info("Server will start on port: " + port);
         this.port = port;
+
+        info("Loading credentials file...");
+        credentials = new File(credentialPath);
+        if (!credentials.exists()) {
+            warning("File does not exist. Creating new file");
+            credentials.createNewFile();
+        }
+
+        FileReader fr = new FileReader(credentials);
+        BufferedReader br = new BufferedReader(fr);
+
+        users = new ConcurrentHashMap<>();
+
+        String currentLine;
+        while ((currentLine = br.readLine()) != null) {
+            Pattern pattern = Pattern.compile("([a-zA-Z0-9]+):(.*)");
+            Matcher m = pattern.matcher(currentLine);
+            if (m.find())
+                users.put(m.group(1), m.group(2));
+        }
+
+        info("Found: " + users.size() + " users");
+        br.close();
+        fr.close();
+
         info("Loading keystore...");
         FileInputStream is = new FileInputStream(keystorePath);
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
@@ -201,24 +231,63 @@ public class Server extends Logger {
     }
 
     public static void main(String[] args) {
+
+        // Initialize all the options that are avaliable
+        Option portOption = Option.builder("p").argName("port").longOpt("port").desc("port number to bind to").hasArg().build();
+        Option credentialsOption = Option.builder("c").argName("file").longOpt("credential").desc("credential file to use").hasArg().build();
+        Option keystorePathOption = Option.builder("k").argName("file").longOpt("keystore").desc("location of keystore").hasArg().build();
+        Option keystorePasswordOption = Option.builder("kp").argName("password").longOpt("keystore-password").desc("password of keystore").hasArg().build();
+        Option aliasOption = Option.builder("a").argName("alias").longOpt("alias").desc("alias to use in keystore").hasArg().build();
+        Option aliasPasswordOption = Option.builder("ap").argName("password").longOpt("alias-password").desc("alias password for alias to use in keystore").hasArg().build();
+
+        // Group keystore together
+        OptionGroup keystoreOptionGroup = new OptionGroup();
+        keystoreOptionGroup.addOption(keystorePathOption);
+        keystoreOptionGroup.addOption(keystorePasswordOption);
+
+        // Group alias together
+        OptionGroup aliasOptionGroup = new OptionGroup();
+        aliasOptionGroup.addOption(aliasOption);
+        aliasOptionGroup.addOption(aliasPasswordOption);
+
+        // Add all the options into options.
+        Options options = new Options();
+        options.addOption(portOption);
+        options.addOption(credentialsOption);
+        options.addOptionGroup(keystoreOptionGroup);
+        options.addOptionGroup(aliasOptionGroup);
+
+        // Initialize the parsers and helpers
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd;
+
+        // Try to understand the arguments entered
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            // Prints out help message if cannot understand
+            System.out.println(e.getMessage());
+            formatter.printHelp("Server", options);
+
+            System.exit(1);
+            return;
+        }
+
         Server server = null;
         try {
-            if (args.length == 0) {
-                server = new Server(1500, "ACGChatKeystore.pfx", "1qwer$#@!", "ACGChatServerSigned", "1qwer$#@!");
-            } else if (args.length == 1 && args[0].matches("^[0-9]{1,5}$")) {
-                int port = Integer.parseInt(args[0]);
-                if (port <= 65535) {
-                    server = new Server(port, "ACGChatKeystore.pfx", "1qwer$#@!", "ACGChatServerSigned", "1qwer$#@!");
-                }
-            } else {
-                System.out.println("Usage: <filename> [port]");
-                return;
-            }
-
+            // Start the server based on arguments
+            int port = Integer.parseInt(cmd.getOptionValue("port", "1500"));
+            server = new Server(port,
+                    cmd.getOptionValue("credential", "Credentials"),
+                    cmd.getOptionValue("keystore", "ACGChatKeystore.pfx"),
+                    cmd.getOptionValue("keystore-password", "1qwer$#@!"),
+                    cmd.getOptionValue("alias", "ACGChatServerSigned"),
+                    cmd.getOptionValue("alias-password", "1qwer$#@!"));
+            server.start();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        server.start();
     }
 
 }

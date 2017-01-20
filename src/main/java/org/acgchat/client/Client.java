@@ -205,10 +205,10 @@ public class Client extends Logger {
                     ChatMessage msg = (ChatMessage) sInput.readObject();
                     // if console mode print the message and add back the prompt
                     chat(msg.getUser() + ": " + msg.getMessage());
-                    System.out.print(">");
+                    System.out.print("> ");
                 } catch (IOException e) {
                     error("Server has close the connection: " + e);
-                    break;
+                    System.exit(0);
                 }
                 // can't happen with a String object but need the catch anyhow
                 catch (ClassNotFoundException e2) {
