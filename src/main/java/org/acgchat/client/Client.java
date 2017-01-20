@@ -72,7 +72,7 @@ public class Client extends Logger {
             return false;
         }
         info("Connection complete. Listening from server.");
-        new ListenFromServer();
+        new ListenFromServer().start();
         return true;
     }
 

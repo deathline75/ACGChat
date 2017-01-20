@@ -152,6 +152,7 @@ public class Server extends Logger {
                 } catch (IOException | ClassNotFoundException e) {
                     error("Error when receiving a new message: " + e);
                     e.printStackTrace();
+                    break;
                 }
             }
             remove(getClientThreadId());
