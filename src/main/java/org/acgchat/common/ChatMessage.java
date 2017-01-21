@@ -9,9 +9,9 @@ public class ChatMessage implements Serializable{
 
     private ChatMessageType type;
     private String user;
-    private String message;
+    private Object message;
 
-    public ChatMessage(ChatMessageType type, String user, String message) {
+    public ChatMessage(ChatMessageType type, String user, Object message) {
         this.type = type;
         this.user = user;
         this.message = message;
@@ -25,7 +25,7 @@ public class ChatMessage implements Serializable{
         this.type = type;
     }
 
-    public String getMessage() {
+    public Object getMessage() {
         return message;
     }
 

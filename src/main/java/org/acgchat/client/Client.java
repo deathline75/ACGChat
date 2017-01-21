@@ -2,6 +2,7 @@ package org.acgchat.client;
 
 import org.acgchat.common.ChatMessage;
 import org.acgchat.common.Logger;
+import org.apache.commons.cli.*;
 import org.bouncycastle.crypto.tls.*;
 
 import javax.crypto.BadPaddingException;
@@ -29,8 +30,8 @@ public class Client extends Logger {
     private ObjectInputStream sInput;
     private ObjectOutputStream sOutput;
 
-    Client(String server, int port, String cacert, String username) throws CertificateException, IOException {
-        info("Client will listen to: " + server + ":" + port);
+    Client(String server, int port, String cacert, boolean login, String username, String password) throws CertificateException, IOException {
+        info("Client will connect to: " + server + ":" + port);
         this.server = server;
         this.port = port;
 
@@ -66,6 +67,9 @@ public class Client extends Logger {
             sOutput = new ObjectOutputStream(tlsClientProtocol.getOutputStream());
             sOutput.flush();
             sInput = new ObjectInputStream(tlsClientProtocol.getInputStream());
+
+            
+
         } catch (IOException e) {
             error("Unable to connect to server: " + e);
             e.printStackTrace();
@@ -109,7 +113,43 @@ public class Client extends Logger {
     }
 
     public static void main(String[] args) {
-        // default values
+
+        Option serverAddressOption = Option.builder("a").argName("address").longOpt("server-address").hasArg().desc("server address to connect to").build();
+        Option serverPortOption = Option.builder("p").argName("number").longOpt("server-port").hasArg().desc("port number to connect to").build();
+        Option loginOption = Option.builder("l").longOpt("login").build();
+        Option registerOption = Option.builder("r").longOpt("register").build();
+        Option usernameOption = Option.builder("u").argName("username").longOpt("username").hasArg().desc("username to connect as").build();
+        Option passwordOption = Option.builder("p").argName("password").longOpt("password").hasArg().desc("password to authenticate the user").build();
+        Option caCertOption = Option.builder("c").argName("file").longOpt("certificate").hasArg().desc("certificate authority's certificate").build();
+
+        // Add all the options into options.
+        Options options = new Options();
+        options.addOption(serverAddressOption);
+        options.addOption(serverPortOption);
+        options.addOption(loginOption);
+        options.addOption(registerOption);
+        options.addOption(usernameOption);
+        options.addOption(passwordOption);
+        options.addOption(caCertOption);
+
+        // Initialize the parsers and helpers
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd;
+
+        // Try to understand the arguments entered
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            // Prints out help message if cannot understand
+            System.out.println(e.getMessage());
+            formatter.printHelp("Server", options);
+
+            System.exit(1);
+            return;
+        }
+
+        /*// default values
         int portNumber = 1500;
         String serverAddress = "localhost";
         String userName = "Anonymous";
@@ -138,11 +178,52 @@ public class Client extends Logger {
             default:
                 System.out.println("Usage is: > java Client [username] [portNumber] {serverAddress]");
                 return;
+        }*/
+
+        boolean login = true;
+        // wait for messages from user
+        Scanner scan = new Scanner(System.in);
+
+        if (cmd.hasOption("login")) {
+            login = true;
+        } else if (cmd.hasOption("register")) {
+            login = false;
+        } else {
+            System.out.print("Are you logging in or registering? [L/r]: ");
+            String input = scan.nextLine();
+            if (input.startsWith("r")) {
+                login = false;
+            }
         }
+
+        String userName = cmd.getOptionValue("username");
+        if (userName == null) {
+            System.out.print("Enter your username: ");
+            userName = scan.nextLine();
+        }
+
+        String password = cmd.getOptionValue("password");
+        while (password == null) {
+            System.out.print("Enter your password: ");
+            password = scan.nextLine();
+            if (!login) {
+                System.out.print("Re-enter your password: ");
+                if (!scan.nextLine().equals(password)) {
+                    password = null;
+                    System.out.println("Passwords do not match!");
+                }
+            }
+        }
+
+
         // create the Client object
         Client client = null;
         try {
-            client = new Client(serverAddress, portNumber,"ACGChatCA.cert", userName);
+            int port = Integer.parseInt(cmd.getOptionValue("server-port", "1500"));
+            client = new Client(cmd.getOptionValue("server-address", "localhost"),
+                    port,
+                    cmd.getOptionValue("certificate", "ACGChatCA.cert"),
+                    login, userName, password);
         } catch (CertificateException | IOException e) {
             e.printStackTrace();
         }
@@ -151,8 +232,6 @@ public class Client extends Logger {
         if (!client.start())
             return;
 
-        // wait for messages from user
-        Scanner scan = new Scanner(System.in);
         // loop forever for message from the user
         while (true) {
             System.out.print("> ");

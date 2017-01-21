@@ -13,11 +13,17 @@ import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.StandardOpenOption;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -96,6 +102,7 @@ public class Server extends Logger {
                     info("Client #" + newClient.getClientThreadId() + " (" + s.getRemoteSocketAddress().toString() + ") has attempted to connect.");
                     clients.put(newClient.getClientThreadId(), newClient);
                     newClient.start();
+                    updateCredentialsFile();
                 } else {
                     newClient.close();
                 }
@@ -133,6 +140,7 @@ public class Server extends Logger {
         ObjectInputStream sInput;
         ObjectOutputStream sOutput;
         boolean running = false;
+        String user = null;
 
         ClientThread(Socket socket) {
             this.ctid = idGenerator++;
@@ -162,17 +170,27 @@ public class Server extends Logger {
                     ChatMessage chatMessage = (ChatMessage) sInput.readObject();
                     switch (chatMessage.getType()) {
                         case MESSAGE:
-                            broadcast(chatMessage);
+                            if (user != null)
+                                broadcast(chatMessage);
+                            else
+                                writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "You are not logged in!"));
                             break;
                         case COMMAND:
                             break;
                         case LOGIN:
+                            if (user != null)
+                                writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "You are already logged in!"));
                             break;
                         case LOGOUT:
                             info(chatMessage.getUser() + " has disconnected from the server.");
                             running = false;
                             break;
                         case REGISTER:
+                            if (user != null)
+                                writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "You are already logged in!"));
+                            else {
+
+                            }
                             break;
                         case ERROR:
                         case SUCCESS:
@@ -228,6 +246,15 @@ public class Server extends Logger {
             }
             return true;
         }
+    }
+
+    private boolean updateCredentialsFile() throws IOException {
+        List<String> out = new ArrayList<>();
+        for (String k: users.keySet()) {
+            out.add(k + ":" + users.get(k));
+        }
+        Files.write(credentials.toPath(), out, Charset.forName("UTF-8"));
+        return true;
     }
 
     public static void main(String[] args) {
