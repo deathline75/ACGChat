@@ -4,14 +4,13 @@ import org.acgchat.common.ChatMessage;
 import org.acgchat.common.Logger;
 import org.apache.commons.cli.*;
 import org.bouncycastle.crypto.tls.*;
+import org.bouncycastle.crypto.tls.Certificate;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import java.io.*;
 import java.net.Socket;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.SecureRandom;
+import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -29,12 +28,17 @@ public class Client extends Logger {
     private TlsClientProtocol tlsClientProtocol;
     private ObjectInputStream sInput;
     private ObjectOutputStream sOutput;
+    private boolean login;
+    private String username;
+    private String password;
 
-    Client(String server, int port, String cacert, boolean login, String username, String password) throws CertificateException, IOException {
+    Client(String server, int port, String cacert, boolean login, String username, String password) throws CertificateException, IOException, NoSuchAlgorithmException {
         info("Client will connect to: " + server + ":" + port);
         this.server = server;
         this.port = port;
-
+        this.login = login;
+        this.username = username;
+        this.password = password;
         info("Loading in certificate authority's certificate...");
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         FileInputStream fis = new FileInputStream(cacert);
@@ -68,9 +72,25 @@ public class Client extends Logger {
             sOutput.flush();
             sInput = new ObjectInputStream(tlsClientProtocol.getInputStream());
 
-            
+            if (login) {
+                info("Logging you into the server...");
+                sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.LOGIN, username, password));
+            } else {
+                info("Registering you into the server...");
+                sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.REGISTER, username, password));
+            }
 
-        } catch (IOException e) {
+            ChatMessage reply = (ChatMessage) sInput.readObject();
+            switch (reply.getType()) {
+                case SUCCESS:
+                    info((String) reply.getMessage());
+                    break;
+                default:
+                    error("Unable to register/login: " + reply.getMessage());
+                    return false;
+            }
+
+        } catch (IOException | ClassNotFoundException e) {
             error("Unable to connect to server: " + e);
             e.printStackTrace();
             return false;
@@ -143,7 +163,7 @@ public class Client extends Logger {
         } catch (ParseException e) {
             // Prints out help message if cannot understand
             System.out.println(e.getMessage());
-            formatter.printHelp("Server", options);
+            formatter.printHelp("Client", options);
 
             System.exit(1);
             return;
@@ -197,7 +217,7 @@ public class Client extends Logger {
         }
 
         String userName = cmd.getOptionValue("username");
-        if (userName == null) {
+        while (userName == null || userName.isEmpty()) {
             System.out.print("Enter your username: ");
             userName = scan.nextLine();
         }
@@ -224,7 +244,7 @@ public class Client extends Logger {
                     port,
                     cmd.getOptionValue("certificate", "ACGChatCA.cert"),
                     login, userName, password);
-        } catch (CertificateException | IOException e) {
+        } catch (CertificateException | IOException | NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
         // test if we can start the connection to the Server

@@ -41,6 +41,15 @@ public class ChatMessage implements Serializable{
         this.user = user;
     }
 
+    @Override
+    public String toString() {
+        return "ChatMessage{" +
+                "type=" + type +
+                ", user='" + user + '\'' +
+                ", message=" + message +
+                '}';
+    }
+
     public enum ChatMessageType {
         MESSAGE(0),
         LOGIN(1),
@@ -58,6 +67,13 @@ public class ChatMessage implements Serializable{
 
         public int getId() {
             return id;
+        }
+
+        @Override
+        public String toString() {
+            return "ChatMessageType{" +
+                    "id=" + id +
+                    '}';
         }
     }
 

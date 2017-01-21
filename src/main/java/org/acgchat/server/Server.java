@@ -10,6 +10,11 @@ import org.bouncycastle.crypto.tls.TlsServerProtocol;
 import org.bouncycastle.crypto.tls.TlsSignerCredentials;
 import org.bouncycastle.crypto.util.PrivateKeyFactory;
 
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.xml.bind.DatatypeConverter;
+import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -21,7 +26,9 @@ import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -156,7 +163,57 @@ public class Server extends Logger {
                 sOutput = new ObjectOutputStream(tlsServerProtocol.getOutputStream());
                 sOutput.flush();
                 sInput = new ObjectInputStream(tlsServerProtocol.getInputStream());
-                running = true;
+
+                try {
+                    ChatMessage chatMessage = (ChatMessage) sInput.readObject();
+                    switch (chatMessage.getType()) {
+                        case REGISTER:
+                            if (!users.containsKey(chatMessage.getUser())) {
+                                byte[] salt = new byte[16];
+                                SecureRandom random = new SecureRandom();
+                                random.nextBytes(salt);
+                                String hashed = DatatypeConverter.printBase64Binary(hashPassword(((String)chatMessage.getMessage()).toCharArray(), salt, 10000, 512));
+                                String salt64 = DatatypeConverter.printBase64Binary(salt);
+
+                                users.put(chatMessage.getUser(), salt64 + ';' + hashed);
+                                updateCredentialsFile();
+
+                                user = chatMessage.getUser();
+                                info("Registered new user: " + user);
+
+                                sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.SUCCESS, chatMessage.getUser(), "Registration successful!"));
+                                running = true;
+                            } else {
+                                warning("Client (" + socket.getRemoteSocketAddress().toString() + ") attempted to create an existing user.");
+                                writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Unable to register username."));
+                            }
+                            break;
+                        case LOGIN:
+                            if (users.containsKey(chatMessage.getUser())) {
+                                String[] combo = users.get(chatMessage.getUser()).split(";");
+                                if (Arrays.equals(hashPassword(((String)chatMessage.getMessage()).toCharArray(), DatatypeConverter.parseBase64Binary(combo[0]), 10000, 512), DatatypeConverter.parseBase64Binary(combo[1]))){
+                                    user = chatMessage.getUser();
+
+                                    sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.SUCCESS, chatMessage.getUser(), "Login successful!"));
+                                    running = true;
+                                    break;
+                                }
+                            } else {
+                                hashPassword(((String)chatMessage.getMessage()).toCharArray(), DatatypeConverter.parseBase64Binary("asdf"), 10000, 512);
+                            }
+                            warning("Client (" + socket.getRemoteSocketAddress().toString() + ") supplied wrong credentials when logging in.");
+                            writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Invalid username or password!"));
+                            break;
+                        default:
+                            warning("Client (" + socket.getRemoteSocketAddress().toString() + ") attempted to forge a packet: " + chatMessage.toString());
+                            writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Invalid or unsupported message type!"));
+                    }
+
+                } catch (ClassNotFoundException e) {
+                    writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, "", "Internal error occurred."));
+                    e.printStackTrace();
+                }
+
             } catch (IOException | CertificateEncodingException e) {
                 error("Unable to establish secure connection.");
                 e.printStackTrace();
@@ -177,21 +234,12 @@ public class Server extends Logger {
                             break;
                         case COMMAND:
                             break;
-                        case LOGIN:
-                            if (user != null)
-                                writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "You are already logged in!"));
-                            break;
                         case LOGOUT:
                             info(chatMessage.getUser() + " has disconnected from the server.");
                             running = false;
                             break;
+                        case LOGIN:
                         case REGISTER:
-                            if (user != null)
-                                writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "You are already logged in!"));
-                            else {
-
-                            }
-                            break;
                         case ERROR:
                         case SUCCESS:
                         default:
@@ -255,6 +303,29 @@ public class Server extends Logger {
         }
         Files.write(credentials.toPath(), out, Charset.forName("UTF-8"));
         return true;
+    }
+
+    /**
+     * Hashes a password with PBKDF2. Salt is required to hash the password.
+     *
+     * @param password The password to hash
+     * @param salt The salt to make it random
+     * @param iterations Amount of rounds to run the algorithm
+     * @param keyLength The length of the key it will generate
+     * @return The hashed password from the algorithm.
+     */
+    public static byte[] hashPassword(final char[] password, final byte[] salt, final int iterations, final int keyLength) {
+
+        try {
+            SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512");
+            PBEKeySpec spec = new PBEKeySpec(password, salt, iterations, keyLength);
+            SecretKey key = skf.generateSecret(spec);
+            byte[] res = key.getEncoded();
+            return res;
+
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static void main(String[] args) {
