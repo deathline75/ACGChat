@@ -115,11 +115,25 @@ public class Server extends Logger {
                 }
             }
             warning("Server is closing...");
+            for (ClientThread ct: clients.values()) {
+                ct.close();
+            }
             serverSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+    }
+
+    protected void stop() {
+        keepGoing = false;
+        // connect to myself as Client to exit statement
+        // Socket socket = serverSocket.accept();
+        try {
+            new Socket("localhost", port);
+        } catch (Exception e) {
+            // nothing I can really do
+        }
     }
 
     private synchronized void broadcast(ChatMessage message) {

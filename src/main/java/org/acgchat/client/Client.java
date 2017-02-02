@@ -139,7 +139,7 @@ public class Client extends Logger {
         Option loginOption = Option.builder("l").longOpt("login").build();
         Option registerOption = Option.builder("r").longOpt("register").build();
         Option usernameOption = Option.builder("u").argName("username").longOpt("username").hasArg().desc("username to connect as").build();
-        Option passwordOption = Option.builder("p").argName("password").longOpt("password").hasArg().desc("password to authenticate the user").build();
+        Option passwordOption = Option.builder("up").argName("password").longOpt("password").hasArg().desc("password to authenticate the user").build();
         Option caCertOption = Option.builder("c").argName("file").longOpt("certificate").hasArg().desc("certificate authority's certificate").build();
 
         // Add all the options into options.
