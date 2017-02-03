@@ -18,6 +18,7 @@ import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
@@ -48,6 +49,7 @@ public class Server extends Logger {
     private HashMap<Integer, ClientThread> clients;
     private File credentials;
     private ConcurrentHashMap<String, String> users;
+    private ConcurrentHashMap<String, Integer> loggedIn = new ConcurrentHashMap<>();
 
     protected Server(int port, String credentialPath, String keystorePath, String keystorePassword, String alias, String aliasPassword) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
         info("Server will start on port: " + port);
@@ -108,6 +110,7 @@ public class Server extends Logger {
                 if (newClient.running) {
                     info("Client #" + newClient.getClientThreadId() + " (" + s.getRemoteSocketAddress().toString() + ") has attempted to connect.");
                     clients.put(newClient.getClientThreadId(), newClient);
+                    loggedIn.put(newClient.getUser(), newClient.getClientThreadId());
                     newClient.start();
                     updateCredentialsFile();
                 } else {
@@ -150,6 +153,7 @@ public class Server extends Logger {
     }
 
     synchronized void remove(int ctid) {
+        loggedIn.remove(clients.get(ctid).getUser());
         clients.remove(ctid);
     }
 
@@ -182,7 +186,7 @@ public class Server extends Logger {
                     ChatMessage chatMessage = (ChatMessage) sInput.readObject();
                     switch (chatMessage.getType()) {
                         case REGISTER:
-                            if (!users.containsKey(chatMessage.getUser())) {
+                            if (!users.containsKey(chatMessage.getUser()) && !loggedIn.containsKey(chatMessage.getUser())) {
                                 byte[] salt = new byte[16];
                                 SecureRandom random = new SecureRandom();
                                 random.nextBytes(salt);
@@ -193,21 +197,27 @@ public class Server extends Logger {
                                 updateCredentialsFile();
 
                                 user = chatMessage.getUser();
-                                info("Registered new user: " + user);
+                                info("Client #" + getClientThreadId() + " registered a new user: " + user);
 
                                 sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.SUCCESS, chatMessage.getUser(), "Registration successful!"));
                                 running = true;
                             } else {
+                                byte[] salt = new byte[16];
+                                SecureRandom random = new SecureRandom();
+                                random.nextBytes(salt);
+                                String hashed = DatatypeConverter.printBase64Binary(hashPassword(((String)chatMessage.getMessage()).toCharArray(), salt, 10000, 512));
+                                String salt64 = DatatypeConverter.printBase64Binary(salt);
                                 warning("Client (" + socket.getRemoteSocketAddress().toString() + ") attempted to create an existing user.");
                                 writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Unable to register username."));
                             }
                             break;
                         case LOGIN:
-                            if (users.containsKey(chatMessage.getUser())) {
+                            if (users.containsKey(chatMessage.getUser()) && !loggedIn.containsKey(chatMessage.getUser())) {
                                 String[] combo = users.get(chatMessage.getUser()).split(";");
                                 if (Arrays.equals(hashPassword(((String)chatMessage.getMessage()).toCharArray(), DatatypeConverter.parseBase64Binary(combo[0]), 10000, 512), DatatypeConverter.parseBase64Binary(combo[1]))){
                                     user = chatMessage.getUser();
 
+                                    info("Client #" + getClientThreadId() + " has logged in as: " + user);
                                     sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.SUCCESS, chatMessage.getUser(), "Login successful!"));
                                     running = true;
                                     break;
@@ -247,9 +257,17 @@ public class Server extends Logger {
                                 writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "You are not logged in!"));
                             break;
                         case COMMAND:
+                            switch ((String) chatMessage.getMessage()) {
+                                case "whoisin":case "list":
+                                    writeMsg(new ChatMessage(ChatMessage.ChatMessageType.COMMAND, "SYSTEM", "List of online users:"));
+                                    for (String s: loggedIn.keySet())
+                                        writeMsg(new ChatMessage(ChatMessage.ChatMessageType.COMMAND, "SYSTEM", s));
+                                    break;
+                                default: broadcast(chatMessage);
+                            }
                             break;
                         case LOGOUT:
-                            info(chatMessage.getUser() + " has disconnected from the server.");
+                            info("Client #" + getClientThreadId() + " (" + getUser() + ") has disconnected from the server.");
                             running = false;
                             break;
                         case LOGIN:
@@ -259,7 +277,17 @@ public class Server extends Logger {
                         default:
                             writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Invalid or unsupported message type!"));
                     }
-                } catch (IOException | ClassNotFoundException e) {
+                } catch (SocketException e)  {
+                    if (e.getMessage().startsWith("Connection reset by peer")) {
+                        info("Client #" + getClientThreadId() + " (" + getUser() + ") has disconnected from the server.");
+                        running = false;
+                    } else {
+                        error("Error when receiving a new message: " + e);
+                        e.printStackTrace();
+                        break;
+                    }
+                }
+                catch (IOException | ClassNotFoundException e) {
                     error("Error when receiving a new message: " + e);
                     e.printStackTrace();
                     break;
@@ -271,6 +299,10 @@ public class Server extends Logger {
 
         public int getClientThreadId() {
             return ctid;
+        }
+
+        public String getUser() {
+            return user;
         }
 
         public void close() {

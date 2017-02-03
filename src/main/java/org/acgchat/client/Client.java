@@ -264,8 +264,8 @@ public class Client extends Logger {
                 break;
             }
             // message WhoIsIn
-            else if (msg.equalsIgnoreCase("/whoisin")) {
-                client.sendMessage(new ChatMessage(ChatMessage.ChatMessageType.COMMAND, userName, ""));
+            else if (msg.startsWith("/")) {
+                client.sendMessage(new ChatMessage(ChatMessage.ChatMessageType.COMMAND, userName, msg.substring(1)));
             } else {                // default to ordinary message
                 client.sendMessage(new ChatMessage(ChatMessage.ChatMessageType.MESSAGE, userName, msg));
             }

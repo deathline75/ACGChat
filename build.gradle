@@ -2,11 +2,31 @@ group 'org.acgchat'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
+apply plugin: 'gradle-one-jar'
 
 sourceCompatibility = 1.7
+targetCompatibility = 1.7
 
 repositories {
     mavenCentral()
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.github.rholder:gradle-one-jar:1.0.4'
+    }
+}
+
+task clientJar(type: OneJar) {
+    mainClass = 'org.acgchat.client.Client'
+    archiveName = 'ACGChat-' + version + '-client.jar'
+}
+task serverJar(type: OneJar) {
+    mainClass = 'org.acgchat.server.Server'
+    archiveName = 'ACGChat-' + version + '-server.jar'
 }
 
 dependencies {
