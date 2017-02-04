@@ -100,7 +100,7 @@ public class Client extends Logger {
         return true;
     }
 
-    private void sendMessage(ChatMessage chatMessage) {
+    protected void sendMessage(ChatMessage chatMessage) {
         try {
             sOutput.writeObject(chatMessage);
         } catch (IOException e) {
@@ -111,7 +111,7 @@ public class Client extends Logger {
      * When something goes wrong
      * Close the Input/Output streams and disconnect not much to do in the catch clause
      */
-    private void disconnect() {
+    protected void disconnect() {
         try {
             if (sInput != null) sInput.close();
         } catch (Exception e) {
@@ -257,6 +257,10 @@ public class Client extends Logger {
             System.out.print("> ");
             // read message from user
             String msg = scan.nextLine();
+
+            if (client.socket.isClosed())
+                break;
+
             // logout if message is LOGOUT
             if (msg.equalsIgnoreCase("/logout")) {
                 client.sendMessage(new ChatMessage(ChatMessage.ChatMessageType.LOGOUT, userName, ""));
@@ -307,7 +311,9 @@ public class Client extends Logger {
                     System.out.print("> ");
                 } catch (IOException e) {
                     error("Server has close the connection: " + e);
-                    System.exit(0);
+                    disconnect();
+                    warning("Press 'Enter' to quit.");
+                    break;
                 }
                 // can't happen with a String object but need the catch anyhow
                 catch (ClassNotFoundException e2) {

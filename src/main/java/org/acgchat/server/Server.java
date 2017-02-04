@@ -257,6 +257,7 @@ public class Server extends Logger {
                                 writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "You are not logged in!"));
                             break;
                         case COMMAND:
+                            chat(chatMessage.getUser() + ": /" + (String) chatMessage.getMessage());
                             switch ((String) chatMessage.getMessage()) {
                                 case "whoisin":case "list":
                                     writeMsg(new ChatMessage(ChatMessage.ChatMessageType.COMMAND, "SYSTEM", "List of online users:"));
