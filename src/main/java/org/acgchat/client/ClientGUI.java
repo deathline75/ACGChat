@@ -13,6 +13,8 @@ import java.util.Date;
 
 /**
  * Created by Kelvin on 16/1/2017.
+ * When the client registers or logins from {@link ClientGUIRegister} and {@link ClientGUILogin} respectively,
+ * this class object will be created to be the middleman of the GUI and the backend code.
  */
 public class ClientGUI {
     private JPanel mainPanel;
@@ -25,12 +27,27 @@ public class ClientGUI {
     private ClientGUILogin clientGUILogin;
     private String userName;
 
+    /**
+     * Initialise the main GUI panel for chatting.
+     * @param init The {@link JFrame} that holds all the JPanels. Used for switching the JPanels.
+     * @param clientGUILogin The login panel to redirect back to if an error occurs or the user logs out.
+     * @param server The server's IP or host name
+     * @param port The server's port number
+     * @param cacert The location of the root CA's certificate
+     * @param login Determines if the connection starts as a login (true) or a register (false)
+     * @param username The username to conenct as
+     * @param password The password to authenticate as
+     * @throws CertificateException When the certificate given is invalid
+     * @throws IOException When the file has issues loading
+     * @throws NoSuchAlgorithmException When the algorithm for the certificate does not exist
+     */
     public ClientGUI(final JFrame init, final ClientGUILogin clientGUILogin, String server, int port, String cacert, boolean login, String username, String password) throws CertificateException, NoSuchAlgorithmException, IOException {
         this.init = init;
         this.clientGUILogin = clientGUILogin;
         this.userName = username;
         clientGUIObject = new ClientGUIObject(server, port, cacert, login, username, password);
 
+        // Set the JFrame to render the ClientGUI.
         init.setContentPane(mainPanel);
         init.setTitle("ACG Chat Client");
         init.pack();
@@ -40,6 +57,7 @@ public class ClientGUI {
         else
             clientGUIObject.system("Attempting to register...");
 
+        // Register the action listener for the logout button
         logoutButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -53,9 +71,11 @@ public class ClientGUI {
             }
         });
 
+        // Start the connection to the server
         if (clientGUIObject.start()) {
             clientGUIObject.system("Connected and logged in!");
 
+            // If connection is successful, start the action listener to handle message sending.
             SendMessageActionListener sendMessageActionListener = new SendMessageActionListener();
 
             messageTextField.setEnabled(true);
@@ -114,8 +134,23 @@ public class ClientGUI {
         return mainPanel;
     }
 
+    /**
+     * The GUI's implementation of the command line interface version of {@link Client}
+     */
     public class ClientGUIObject extends Client {
 
+        /**
+         * Initialise the ClientGUIObject with the required variables
+         * @param server The server's IP or host name
+         * @param port The server's port number
+         * @param cacert The location of the root CA's certificate
+         * @param login Determines if the connection starts as a login (true) or a register (false)
+         * @param username The username to conenct as
+         * @param password The password to authenticate as
+         * @throws CertificateException When the certificate given is invalid
+         * @throws IOException When the file has issues loading
+         * @throws NoSuchAlgorithmException When the algorithm for the certificate does not exist
+         */
         public ClientGUIObject(String server, int port, String cacert, boolean login, String username, String password) throws CertificateException, IOException, NoSuchAlgorithmException {
             super(server, port, cacert, login, username, password);
         }
@@ -134,25 +169,34 @@ public class ClientGUI {
             messagesTextArea.setCaretPosition(messagesTextArea.getText().length() - 1);
         }
 
+        /**
+         * Used for system messages to be printed on the GUI
+         * @param message The system message to be displayed on the user's GUI textbox.
+         */
         public void system(String message) {
             chat("SYSTEM: " + message);
         }
     }
 
+    /**
+     * Used for detecting when the enter key is pressed in any text field or the send button is pressed.
+     */
     private class SendMessageActionListener implements ActionListener {
 
         @Override
         public void actionPerformed(ActionEvent e) {
             String msg = messageTextField.getText();
+            // Send a logout message
             if (msg.equalsIgnoreCase("/logout")) {
                 clientGUIObject.sendMessage(new ChatMessage(ChatMessage.ChatMessageType.LOGOUT, userName, ""));
             }
-            // message WhoIsIn
+            // Send a command
             else if (msg.startsWith("/")) {
                 clientGUIObject.sendMessage(new ChatMessage(ChatMessage.ChatMessageType.COMMAND, userName, msg.substring(1)));
             } else {                // default to ordinary message
                 clientGUIObject.sendMessage(new ChatMessage(ChatMessage.ChatMessageType.MESSAGE, userName, msg));
             }
+            // Clear the message box.
             messageTextField.setText("");
         }
     }

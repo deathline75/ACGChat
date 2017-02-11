@@ -19,6 +19,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
+ * The GUI version of Server of the chat server.
  * Created by Kelvin on 16/1/2017.
  */
 public class ServerGUI {
@@ -35,7 +36,11 @@ public class ServerGUI {
     private JPanel mainPanel;
     private ServerGUIObject guiObject;
 
+    /**
+     * Initialise the ServerGUI
+     */
     public ServerGUI() {
+        // Start the server when the start button is pressed.
         startButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -69,6 +74,10 @@ public class ServerGUI {
         });
     }
 
+    /**
+     * Sets the fields and buttons of the GUI to enabled or disabled
+     * @param state the state of the buttons and fields
+     */
     private void setFieldStates(boolean state) {
         startButton.setEnabled(state);
         portTextField.setEditable(state);
@@ -182,7 +191,9 @@ public class ServerGUI {
         return mainPanel;
     }
 
-
+    /**
+     * The thread to handle the connections flowing into the server
+     */
     public class ServerGUIThread extends Thread {
         public void run() {
             guiObject.start();
@@ -193,8 +204,25 @@ public class ServerGUI {
         }
     }
 
+    /**
+     * The object to link the GUI and the Server.
+     */
     public class ServerGUIObject extends Server {
 
+        /**
+         * Initialise the ServerGUIObject
+         * @param port The port number to start the server on
+         * @param credentialPath The path to the credentials file for users
+         * @param keystorePath The path the the keystore where the private keys are located at.
+         * @param keystorePassword The password of the keystore.
+         * @param alias The alias of the server's private key
+         * @param aliasPassword The password of the alias
+         * @throws IOException When any file cannot be read or written to properly
+         * @throws KeyStoreException When the keystore cannot be initialized properly
+         * @throws CertificateException When the certificate cannot be initialized properly from the keystore
+         * @throws NoSuchAlgorithmException When the algorithm used is not found
+         * @throws UnrecoverableKeyException When the key is stuck in a false vacuum
+         */
         protected ServerGUIObject(int port, String credentialPath, String keystorePath, String keystorePassword, String alias, String aliasPassword) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
             super(port, credentialPath, keystorePath, keystorePassword, alias, aliasPassword);
         }
@@ -214,12 +242,14 @@ public class ServerGUI {
     }
 
     public static void main(String[] args) {
+        // Start the program and load the ServerGUI panel.
         JFrame frame = new JFrame("ServerGUI");
         final ServerGUI serverGUI = new ServerGUI();
         frame.setContentPane(serverGUI.mainPanel);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
+        // Ensure that the server shuts down properly when the window closes.
         frame.addWindowListener(new WindowListener() {
             public void windowOpened(WindowEvent e) {
             }

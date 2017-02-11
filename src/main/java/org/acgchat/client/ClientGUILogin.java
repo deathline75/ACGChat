@@ -9,6 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
 /**
+ * The login panel for users
  * Created by NEOPETS on 03/2/2017.
  */
 public class ClientGUILogin {
@@ -21,15 +22,22 @@ public class ClientGUILogin {
     private JTextField loginServerPortTextField;
     private JFrame init;
 
+    /**
+     * Initialize the login panel
+     * @param init The {@link JFrame} that holds all the JPanels. Used for switching the JPanels.
+     */
     public ClientGUILogin(final JFrame init) {
         this.init = init;
         final ClientGUILogin me = this;
+        // Set the action listener of the text field and login button to loginActionListener
         LoginActionListener loginActionListener = new LoginActionListener(me);
         loginServerPortTextField.addActionListener(loginActionListener);
         loginServerIPTextField.addActionListener(loginActionListener);
         loginUsernameTextField.addActionListener(loginActionListener);
         loginPasswordField.addActionListener(loginActionListener);
         loginButton.addActionListener(loginActionListener);
+
+        // Switch the panel to Register when the Register button is pressed.
         loginRegisterButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -40,11 +48,16 @@ public class ClientGUILogin {
         });
     }
 
+    /**
+     * Get the login panel
+     * @return The login panel
+     */
     public JPanel getLoginPanel() {
         return this.loginPanel;
     }
 
     public static void main(String[] args) {
+        // Start the program and load the login panel.
         JFrame frame = new JFrame("ACG Chat Client Login");
         frame.setContentPane(new ClientGUILogin(frame).loginPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -111,26 +124,38 @@ public class ClientGUILogin {
         return loginPanel;
     }
 
+    /**
+     * Used for detecting when the enter key is pressed in any text field or the login button is pressed.
+     */
     private class LoginActionListener implements ActionListener {
 
         private ClientGUILogin me;
 
+        /**
+         * Initialize the ActionListener
+         * @param me Used to parse to the ClientGUI to switch back to login panel.
+         */
         public LoginActionListener(ClientGUILogin me) {
             this.me = me;
         }
 
         @Override
         public void actionPerformed(ActionEvent e) {
+            // Check if all the fields are filled in
             if (loginPasswordField.getPassword().length != 0 && loginUsernameTextField.getText().length() != 0 &&
                     loginServerPortTextField.getText().length() != 0 && loginServerIPTextField.getText().length() != 0) {
+                // Get all the input values
                 String serverIP = loginServerIPTextField.getText();
                 String username = loginUsernameTextField.getText();
                 String password = new String(loginPasswordField.getPassword());
                 int port = -1;
+
+                // Check for valid port number
                 if (loginServerPortTextField.getText().matches("^[0-9]{1,5}$") &&
                         (port = Integer.parseInt(loginServerPortTextField.getText())) > 0 && port < 65535) {
 
                     try {
+                        // Start the client GUI and switch to it.
                         ClientGUI clientGUIObject = new ClientGUI(init, me, serverIP, port, "ACGChatCA.cert", true, username, password);
 
                     } catch (CertificateException | IOException | NoSuchAlgorithmException e1) {

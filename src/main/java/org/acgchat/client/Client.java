@@ -17,6 +17,7 @@ import java.security.cert.X509Certificate;
 import java.util.Scanner;
 
 /**
+ * The command-line interface and logic of the client.
  * Created by NEOPETS on 18/1/2017.
  */
 public class Client extends Logger {
@@ -32,6 +33,18 @@ public class Client extends Logger {
     private String username;
     private String password;
 
+    /**
+     * The client that will handle the connection
+     * @param server The server's IP or host name
+     * @param port The server's port number
+     * @param cacert The location of the root CA's certificate
+     * @param login Determines if the connection starts as a login (true) or a register (false)
+     * @param username The username to conenct as
+     * @param password The password to authenticate as
+     * @throws CertificateException When the certificate given is invalid
+     * @throws IOException When the file has issues loading
+     * @throws NoSuchAlgorithmException When the algorithm for the certificate does not exist
+     */
     Client(String server, int port, String cacert, boolean login, String username, String password) throws CertificateException, IOException, NoSuchAlgorithmException {
         info("Client will connect to: " + server + ":" + port);
         this.server = server;
@@ -48,11 +61,17 @@ public class Client extends Logger {
 
     }
 
+    /**
+     * Start the connection between the client and server
+     * @return Whether the connection to the server was successful.
+     */
     public boolean start() {
         info("Connecting to the server...");
         try {
             socket = new Socket(server, port);
+            // Create a new BouncyCastle's implementation of TLS client protocol
             tlsClientProtocol = new TlsClientProtocol(socket.getInputStream(), socket.getOutputStream(), new SecureRandom());
+            // Initialise the TLS connection
             tlsClientProtocol.connect(new DefaultTlsClient() {
                 public TlsAuthentication getAuthentication() throws IOException {
                     return new ServerOnlyTlsAuthentication() {
@@ -68,10 +87,15 @@ public class Client extends Logger {
                     };
                 }
             });
+            /*
+             * Get the TLS connection's socket stream to use, as all traffic using this stream will be encrypted
+             * and decrypted automatically.
+             */
             sOutput = new ObjectOutputStream(tlsClientProtocol.getOutputStream());
             sOutput.flush();
             sInput = new ObjectInputStream(tlsClientProtocol.getInputStream());
 
+            // Sends the first authentication packet based on login boolean.
             if (login) {
                 info("Logging you into the server...");
                 sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.LOGIN, username, password));
@@ -80,6 +104,7 @@ public class Client extends Logger {
                 sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.REGISTER, username, password));
             }
 
+            // Checks if the login was successful.
             ChatMessage reply = (ChatMessage) sInput.readObject();
             switch (reply.getType()) {
                 case SUCCESS:
@@ -100,6 +125,10 @@ public class Client extends Logger {
         return true;
     }
 
+    /**
+     * Send a message to the server
+     * @param chatMessage The message to send
+     */
     protected void sendMessage(ChatMessage chatMessage) {
         try {
             sOutput.writeObject(chatMessage);
@@ -107,9 +136,10 @@ public class Client extends Logger {
             error("Exception writing to server: " + e);
             e.printStackTrace();
         }
-    }/*
-     * When something goes wrong
-     * Close the Input/Output streams and disconnect not much to do in the catch clause
+    }
+
+    /**
+     * Disconnect the client completely off the server.
      */
     protected void disconnect() {
         try {
@@ -134,6 +164,7 @@ public class Client extends Logger {
 
     public static void main(String[] args) {
 
+        // Initialize all the arguments the client can use
         Option serverAddressOption = Option.builder("a").argName("address").longOpt("server-address").hasArg().desc("server address to connect to").build();
         Option serverPortOption = Option.builder("p").argName("number").longOpt("server-port").hasArg().desc("port number to connect to").build();
         Option loginOption = Option.builder("l").longOpt("login").build();
@@ -200,6 +231,7 @@ public class Client extends Logger {
                 return;
         }*/
 
+        // Assume the user is attempting to login unless stated otherwise
         boolean login = true;
         // wait for messages from user
         Scanner scan = new Scanner(System.in);
@@ -217,11 +249,13 @@ public class Client extends Logger {
         }
 
         String userName = cmd.getOptionValue("username");
+        // Ask for username if not specified in initial command
         while (userName == null || userName.isEmpty()) {
             System.out.print("Enter your username: ");
             userName = scan.nextLine();
         }
 
+        // Ask for password if not specified in initial command
         String password = cmd.getOptionValue("password");
         while (password == null) {
             System.out.print("Enter your password: ");
@@ -235,10 +269,10 @@ public class Client extends Logger {
             }
         }
 
-
         // create the Client object
         Client client = null;
         try {
+            // If the port number given is invalid, just set it to 1500
             int port = Integer.parseInt(cmd.getOptionValue("server-port", "1500"));
             client = new Client(cmd.getOptionValue("server-address", "localhost"),
                     port,
@@ -263,7 +297,7 @@ public class Client extends Logger {
 
             // logout if message is LOGOUT
             if (msg.equalsIgnoreCase("/logout")) {
-                client.sendMessage(new ChatMessage(ChatMessage.ChatMessageType.LOGOUT, userName, ""));
+                client.sendMessage(new ChatMessage(ChatMessage.ChatMessageType.LOGOUT, userName, null));
                 // break to do the disconnect
                 break;
             }
@@ -278,10 +312,18 @@ public class Client extends Logger {
         client.disconnect();
     }
 
+    /**
+     * Verifies the certificate being sent over from the server.
+     * @param CACert The root CA's certificate to check against
+     * @param serverCert The server certificate to check with the root CA
+     * @throws CertificateException When the certificate does not meet requirements.
+     */
     private static void verifyCertificates(X509Certificate CACert, X509Certificate serverCert) throws CertificateException {
         if (CACert == null || serverCert == null) {
             throw new IllegalArgumentException("Certificate not found");
         }
+
+        // Check if the server certificate is signed by the CA certificate
         if (!CACert.equals(serverCert)) {
             try {
                 serverCert.verify(CACert.getPublicKey());
@@ -289,6 +331,8 @@ public class Client extends Logger {
                 throw new CertificateException("Certificate not trusted", e);
             }
         }
+
+        // Check if expired
         try {
             serverCert.checkValidity();
         } catch (Exception e) {
@@ -296,10 +340,9 @@ public class Client extends Logger {
         }
     }
 
-    /*
- * a class that waits for the message from the server and append them to the JTextArea
- * if we have a GUI or simply System.out.println() it in console mode
- */
+    /**
+    * a class that waits for the message from the server and append them to the respective print locations.
+    */
     class ListenFromServer extends Thread {
 
         public void run() {

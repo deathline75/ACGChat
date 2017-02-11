@@ -37,6 +37,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * The command-line interface and logic of the server.
  * Created by NEOPETS on 18/1/2017.
  */
 public class Server extends Logger {
@@ -51,10 +52,25 @@ public class Server extends Logger {
     private ConcurrentHashMap<String, String> users;
     private ConcurrentHashMap<String, Integer> loggedIn = new ConcurrentHashMap<>();
 
+    /**
+     * Initialize the Server object.
+     * @param port The port number to start the server on
+     * @param credentialPath The path to the credentials file for users
+     * @param keystorePath The path the the keystore where the private keys are located at.
+     * @param keystorePassword The password of the keystore.
+     * @param alias The alias of the server's private key
+     * @param aliasPassword The password of the alias
+     * @throws IOException When any file cannot be read or written to properly
+     * @throws KeyStoreException When the keystore cannot be initialized properly
+     * @throws CertificateException When the certificate cannot be initialized properly from the keystore
+     * @throws NoSuchAlgorithmException When the algorithm used is not found
+     * @throws UnrecoverableKeyException When the key is stuck in a false vacuum
+     */
     protected Server(int port, String credentialPath, String keystorePath, String keystorePassword, String alias, String aliasPassword) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
         info("Server will start on port: " + port);
         this.port = port;
 
+        // Load the credentials file
         info("Loading credentials file...");
         credentials = new File(credentialPath);
         if (!credentials.exists()) {
@@ -65,6 +81,7 @@ public class Server extends Logger {
         FileReader fr = new FileReader(credentials);
         BufferedReader br = new BufferedReader(fr);
 
+        // Store the users into a HashMap with their passwords
         users = new ConcurrentHashMap<>();
 
         String currentLine;
@@ -79,10 +96,13 @@ public class Server extends Logger {
         br.close();
         fr.close();
 
+        // Load the keystore using PKCS#12.
         info("Loading keystore...");
         FileInputStream is = new FileInputStream(keystorePath);
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
-        keyStore.load(is, "1qwer$#@!".toCharArray());
+        keyStore.load(is, keystorePassword.toCharArray());
+
+        // Get the private key of the server out of the keystore
         info("Initializing private key...");
         Key key = keyStore.getKey(alias, aliasPassword.toCharArray());
         if (key instanceof PrivateKey) {
@@ -93,20 +113,27 @@ public class Server extends Logger {
         } else {
             throw new UnrecoverableKeyException("Cannot get private key out of keystore!");
         }
+        // Create a new hashmap to store all the connection threads of all clients connected.
         clients = new HashMap<Integer, ClientThread>();
         info("Loading completed!");
     }
 
+    /**
+     * Start the server.
+     */
     protected void start() {
         try {
+            // Start the socket that will accept connections from clients
             ServerSocket serverSocket = new ServerSocket(port);
             info("----------");
             info("Server has started listening for client connections.");
             while (keepGoing) {
+                // Generate the socket unique to the client and pass it to ClientThread to handle the rest.
                 Socket s = serverSocket.accept();
                 if (!keepGoing)
                     break;
                 ClientThread newClient = new ClientThread(s);
+                // Check if the initial handshake has no issues
                 if (newClient.running) {
                     info("Client #" + newClient.getClientThreadId() + " (" + s.getRemoteSocketAddress().toString() + ") has attempted to connect.");
                     clients.put(newClient.getClientThreadId(), newClient);
@@ -117,6 +144,7 @@ public class Server extends Logger {
                     newClient.close();
                 }
             }
+            // Close all the client threads when keepGoing is false.
             warning("Server is closing...");
             for (ClientThread ct: clients.values()) {
                 ct.close();
@@ -128,6 +156,9 @@ public class Server extends Logger {
 
     }
 
+    /**
+     * Stop the server
+     */
     protected void stop() {
         keepGoing = false;
         // connect to myself as Client to exit statement
@@ -139,6 +170,10 @@ public class Server extends Logger {
         }
     }
 
+    /**
+     * Broadcast the message to all of the users online.
+     * @param message The message to broadcast
+     */
     private synchronized void broadcast(ChatMessage message) {
         // display message on console or GUI
         chat(message.getUser() + ": " + message.getMessage());
@@ -152,11 +187,18 @@ public class Server extends Logger {
         }
     }
 
+    /**
+     * Remove a client from the server pool
+     * @param ctid The unique client ID assigned
+     */
     synchronized void remove(int ctid) {
         loggedIn.remove(clients.get(ctid).getUser());
         clients.remove(ctid);
     }
 
+    /**
+     * The thread used to handle each client individually.
+     */
     class ClientThread extends Thread {
 
         int ctid;
@@ -167,10 +209,16 @@ public class Server extends Logger {
         boolean running = false;
         String user = null;
 
+        /**
+         * Initialize the ClientThread
+         * @param socket The socket that is given from the server that is unique to this client
+         */
         ClientThread(Socket socket) {
             this.ctid = idGenerator++;
             this.socket = socket;
+
             try {
+                // Start the TLS handshake with the client
                 final org.bouncycastle.asn1.x509.Certificate bcCert = org.bouncycastle.asn1.x509.Certificate.getInstance(ASN1TaggedObject.fromByteArray(certificate.getEncoded()));
                 tlsServerProtocol = new TlsServerProtocol(socket.getInputStream(), socket.getOutputStream(), new SecureRandom());
                 tlsServerProtocol.accept(new DefaultTlsServer() {
@@ -178,30 +226,38 @@ public class Server extends Logger {
                         return new DefaultTlsSignerCredentials(context, new org.bouncycastle.crypto.tls.Certificate(new org.bouncycastle.asn1.x509.Certificate[]{bcCert}), PrivateKeyFactory.createKey(keyPair.getPrivate().getEncoded()));
                     }
                 });
+
+                // If the handshake was successful, use the new socket streams to communicate with the clients securely
                 sOutput = new ObjectOutputStream(tlsServerProtocol.getOutputStream());
                 sOutput.flush();
                 sInput = new ObjectInputStream(tlsServerProtocol.getInputStream());
 
                 try {
+                    // Attempt to read if the first message is login or register.
                     ChatMessage chatMessage = (ChatMessage) sInput.readObject();
                     switch (chatMessage.getType()) {
                         case REGISTER:
+                            // Check if the user already exists
                             if (!users.containsKey(chatMessage.getUser()) && !loggedIn.containsKey(chatMessage.getUser())) {
+                                // Generate the salt
                                 byte[] salt = new byte[16];
                                 SecureRandom random = new SecureRandom();
                                 random.nextBytes(salt);
+                                // Hash it with the salt and convert both to Base64 to store inside the credentials file
                                 String hashed = DatatypeConverter.printBase64Binary(hashPassword(((String)chatMessage.getMessage()).toCharArray(), salt, 10000, 512));
                                 String salt64 = DatatypeConverter.printBase64Binary(salt);
 
                                 users.put(chatMessage.getUser(), salt64 + ';' + hashed);
                                 updateCredentialsFile();
 
+                                // Assign this ClientThread to this username
                                 user = chatMessage.getUser();
                                 info("Client #" + getClientThreadId() + " registered a new user: " + user);
 
                                 sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.SUCCESS, chatMessage.getUser(), "Registration successful!"));
                                 running = true;
                             } else {
+                                // Otherwise, delay the connection a bit and send back an error message
                                 byte[] salt = new byte[16];
                                 SecureRandom random = new SecureRandom();
                                 random.nextBytes(salt);
@@ -212,11 +268,13 @@ public class Server extends Logger {
                             }
                             break;
                         case LOGIN:
+                            // Check if the user exists
                             if (users.containsKey(chatMessage.getUser()) && !loggedIn.containsKey(chatMessage.getUser())) {
+                                // Attempt to check if the password provided is correct
                                 String[] combo = users.get(chatMessage.getUser()).split(";");
                                 if (Arrays.equals(hashPassword(((String)chatMessage.getMessage()).toCharArray(), DatatypeConverter.parseBase64Binary(combo[0]), 10000, 512), DatatypeConverter.parseBase64Binary(combo[1]))){
+                                    // User logs in successfully
                                     user = chatMessage.getUser();
-
                                     info("Client #" + getClientThreadId() + " has logged in as: " + user);
                                     sOutput.writeObject(new ChatMessage(ChatMessage.ChatMessageType.SUCCESS, chatMessage.getUser(), "Login successful!"));
                                     running = true;
@@ -245,18 +303,24 @@ public class Server extends Logger {
 
         }
 
+        /**
+         * Start running the thread to check for new messages sent from the client.
+         */
         public void run() {
             while (running) {
                 try {
                     ChatMessage chatMessage = (ChatMessage) sInput.readObject();
+                    // Check the type of message sent
                     switch (chatMessage.getType()) {
                         case MESSAGE:
+                            // Broadcast the message to the server if logged in.
                             if (user != null)
                                 broadcast(chatMessage);
                             else
                                 writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "You are not logged in!"));
                             break;
                         case COMMAND:
+                            // Handle commands sent by user
                             chat(chatMessage.getUser() + ": /" + (String) chatMessage.getMessage());
                             switch ((String) chatMessage.getMessage()) {
                                 case "whoisin":case "list":
@@ -268,6 +332,7 @@ public class Server extends Logger {
                             }
                             break;
                         case LOGOUT:
+                            // Log the user out of the server
                             info("Client #" + getClientThreadId() + " (" + getUser() + ") has disconnected from the server.");
                             running = false;
                             break;
@@ -276,6 +341,7 @@ public class Server extends Logger {
                         case ERROR:
                         case SUCCESS:
                         default:
+                            // Just send invalid message if wrong message is received
                             writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Invalid or unsupported message type!"));
                     }
                 } catch (SocketException e)  {
@@ -298,14 +364,25 @@ public class Server extends Logger {
             close();
         }
 
+        /**
+         * Get the unique client thread ID for this server
+         * @return The unique client thread ID for this server
+         */
         public int getClientThreadId() {
             return ctid;
         }
 
+        /**
+         * Get the user that is connected to this client thread
+         * @return The user that is connected to this client thread
+         */
         public String getUser() {
             return user;
         }
 
+        /**
+         * Close the client thread
+         */
         public void close() {
             try {
                 sInput.close();
@@ -325,7 +402,13 @@ public class Server extends Logger {
             }
         }
 
+        /**
+         * Send a message to the client
+         * @param message The message to send
+         * @return Whether the message is sent successfully
+         */
         public boolean writeMsg(ChatMessage message) {
+            // Check if the server is shut down
             if (tlsServerProtocol.isClosed()) {
                 close();
                 return false;
@@ -343,11 +426,17 @@ public class Server extends Logger {
         }
     }
 
+    /**
+     * Update the credentials file
+     * @return Whether the update was successful.
+     * @throws IOException When the write process fails
+     */
     private boolean updateCredentialsFile() throws IOException {
         List<String> out = new ArrayList<>();
         for (String k: users.keySet()) {
             out.add(k + ":" + users.get(k));
         }
+        // Just override everything.
         Files.write(credentials.toPath(), out, Charset.forName("UTF-8"));
         return true;
     }
@@ -377,7 +466,7 @@ public class Server extends Logger {
 
     public static void main(String[] args) {
 
-        // Initialize all the options that are avaliable
+        // Initialize all the options that are available
         Option portOption = Option.builder("p").argName("port").longOpt("port").desc("port number to bind to").hasArg().build();
         Option credentialsOption = Option.builder("c").argName("file").longOpt("credential").desc("credential file to use").hasArg().build();
         Option keystorePathOption = Option.builder("k").argName("file").longOpt("keystore").desc("location of keystore").hasArg().build();
