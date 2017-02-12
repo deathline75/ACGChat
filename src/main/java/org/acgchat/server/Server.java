@@ -1,6 +1,8 @@
 package org.acgchat.server;
 
 import org.acgchat.common.ChatMessage;
+import org.acgchat.common.Command;
+import org.acgchat.common.CommandsHandler;
 import org.acgchat.common.Logger;
 import org.apache.commons.cli.*;
 import org.bouncycastle.asn1.ASN1TaggedObject;
@@ -197,9 +199,25 @@ public class Server extends Logger {
     }
 
     /**
+     * Get the instance of the server
+     * @return The server
+     */
+    private Server getServer() {
+        return this;
+    }
+
+    /**
+     * Get the login users along with their client thread
+     * @return The login users along with their client thread
+     */
+    public ConcurrentHashMap getLoggedIn() {
+        return this.loggedIn;
+    }
+
+    /**
      * The thread used to handle each client individually.
      */
-    class ClientThread extends Thread {
+    public class ClientThread extends Thread {
 
         int ctid;
         Socket socket;
@@ -321,14 +339,20 @@ public class Server extends Logger {
                             break;
                         case COMMAND:
                             // Handle commands sent by user
-                            chat(chatMessage.getUser() + ": /" + (String) chatMessage.getMessage());
-                            switch ((String) chatMessage.getMessage()) {
-                                case "whoisin":case "list":
-                                    writeMsg(new ChatMessage(ChatMessage.ChatMessageType.COMMAND, "SYSTEM", "List of online users:"));
-                                    for (String s: loggedIn.keySet())
-                                        writeMsg(new ChatMessage(ChatMessage.ChatMessageType.COMMAND, "SYSTEM", s));
-                                    break;
-                                default: broadcast(chatMessage);
+                            chat(chatMessage.getUser() + ": /" + chatMessage.getMessage());
+                            Command command = CommandsHandler.getCommand((String) chatMessage.getMessage());
+                            String regex = "\"([^\"]*)\"|(\\S+)";
+                            Matcher m = Pattern.compile(regex).matcher((String) chatMessage.getMessage());
+                            List<String> list = new ArrayList<>();
+                            while (m.find())
+                                list.add(m.group(1) != null ? m.group(1) : m.group(2));
+                            if (command != null) {
+                                if (!command.execute(getServer(), this, list.toArray(new String[list.size()]))) {
+                                    error(chatMessage.getUser() + "'s command failed.");
+                                    writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, "SYSTEM", "Invalid command syntax!"));
+                                }
+                            } else {
+                                broadcast(chatMessage);
                             }
                             break;
                         case LOGOUT:

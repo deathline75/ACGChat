@@ -1,5 +1,7 @@
 package org.acgchat.client;
 
+import com.intellij.uiDesigner.core.GridConstraints;
+import com.intellij.uiDesigner.core.GridLayoutManager;
 import org.acgchat.common.ChatMessage;
 
 import javax.swing.*;
@@ -29,16 +31,17 @@ public class ClientGUI {
 
     /**
      * Initialise the main GUI panel for chatting.
-     * @param init The {@link JFrame} that holds all the JPanels. Used for switching the JPanels.
+     *
+     * @param init           The {@link JFrame} that holds all the JPanels. Used for switching the JPanels.
      * @param clientGUILogin The login panel to redirect back to if an error occurs or the user logs out.
-     * @param server The server's IP or host name
-     * @param port The server's port number
-     * @param cacert The location of the root CA's certificate
-     * @param login Determines if the connection starts as a login (true) or a register (false)
-     * @param username The username to conenct as
-     * @param password The password to authenticate as
-     * @throws CertificateException When the certificate given is invalid
-     * @throws IOException When the file has issues loading
+     * @param server         The server's IP or host name
+     * @param port           The server's port number
+     * @param cacert         The location of the root CA's certificate
+     * @param login          Determines if the connection starts as a login (true) or a register (false)
+     * @param username       The username to conenct as
+     * @param password       The password to authenticate as
+     * @throws CertificateException     When the certificate given is invalid
+     * @throws IOException              When the file has issues loading
      * @throws NoSuchAlgorithmException When the algorithm for the certificate does not exist
      */
     public ClientGUI(final JFrame init, final ClientGUILogin clientGUILogin, String server, int port, String cacert, boolean login, String username, String password) throws CertificateException, NoSuchAlgorithmException, IOException {
@@ -104,27 +107,27 @@ public class ClientGUI {
      */
     private void $$$setupUI$$$() {
         mainPanel = new JPanel();
-        mainPanel.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(3, 3, new Insets(5, 5, 5, 5), -1, -1));
+        mainPanel.setLayout(new GridLayoutManager(3, 3, new Insets(5, 5, 5, 5), -1, -1));
         final JLabel label1 = new JLabel();
         label1.setText("Enter Message");
-        mainPanel.add(label1, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         messageTextField = new JTextField();
         messageTextField.setEditable(true);
         messageTextField.setEnabled(false);
         messageTextField.setText("");
-        mainPanel.add(messageTextField, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        mainPanel.add(messageTextField, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JScrollPane scrollPane1 = new JScrollPane();
-        mainPanel.add(scrollPane1, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(650, 350), null, 0, false));
+        mainPanel.add(scrollPane1, new GridConstraints(2, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(650, 350), null, 0, false));
         messagesTextArea = new JTextArea();
         messagesTextArea.setEditable(false);
         scrollPane1.setViewportView(messagesTextArea);
         sendButton = new JButton();
         sendButton.setEnabled(false);
         sendButton.setText("Send");
-        mainPanel.add(sendButton, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(sendButton, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         logoutButton = new JButton();
         logoutButton.setText("Logout");
-        mainPanel.add(logoutButton, new com.intellij.uiDesigner.core.GridConstraints(1, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(logoutButton, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**
@@ -141,14 +144,15 @@ public class ClientGUI {
 
         /**
          * Initialise the ClientGUIObject with the required variables
-         * @param server The server's IP or host name
-         * @param port The server's port number
-         * @param cacert The location of the root CA's certificate
-         * @param login Determines if the connection starts as a login (true) or a register (false)
+         *
+         * @param server   The server's IP or host name
+         * @param port     The server's port number
+         * @param cacert   The location of the root CA's certificate
+         * @param login    Determines if the connection starts as a login (true) or a register (false)
          * @param username The username to conenct as
          * @param password The password to authenticate as
-         * @throws CertificateException When the certificate given is invalid
-         * @throws IOException When the file has issues loading
+         * @throws CertificateException     When the certificate given is invalid
+         * @throws IOException              When the file has issues loading
          * @throws NoSuchAlgorithmException When the algorithm for the certificate does not exist
          */
         public ClientGUIObject(String server, int port, String cacert, boolean login, String username, String password) throws CertificateException, IOException, NoSuchAlgorithmException {
@@ -171,6 +175,7 @@ public class ClientGUI {
 
         /**
          * Used for system messages to be printed on the GUI
+         *
          * @param message The system message to be displayed on the user's GUI textbox.
          */
         public void system(String message) {
