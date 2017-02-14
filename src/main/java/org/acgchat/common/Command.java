@@ -4,7 +4,8 @@ import org.acgchat.server.Server;
 
 /**
  * The command object for execution
- * Created by NEOPETS on 12/2/2017.
+ * Authors: Kelvin, Darren, QiuRong, Jonathan
+ * Class: DISM/FT/2B/02
  */
 public interface Command {
 

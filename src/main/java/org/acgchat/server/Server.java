@@ -40,7 +40,8 @@ import java.util.regex.Pattern;
 
 /**
  * The command-line interface and logic of the server.
- * Created by NEOPETS on 18/1/2017.
+ * Authors: Kelvin, Darren, QiuRong, Jonathan
+ * Class: DISM/FT/2B/02
  */
 public class Server extends Logger {
 
@@ -140,6 +141,7 @@ public class Server extends Logger {
                     info("Client #" + newClient.getClientThreadId() + " (" + s.getRemoteSocketAddress().toString() + ") has attempted to connect.");
                     clients.put(newClient.getClientThreadId(), newClient);
                     loggedIn.put(newClient.getUser(), newClient.getClientThreadId());
+                    newClient.writeMsg(new ChatMessage(ChatMessage.ChatMessageType.MESSAGE, "System", "Type '/help' to see the list of commands"));
                     newClient.start();
                     updateCredentialsFile();
                 } else {
@@ -212,6 +214,10 @@ public class Server extends Logger {
      */
     public ConcurrentHashMap getLoggedIn() {
         return this.loggedIn;
+    }
+
+    public ClientThread getUser(String username) {
+        return this.clients.get(this.loggedIn.get(username));
     }
 
     /**

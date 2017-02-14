@@ -15,7 +15,8 @@ import java.util.Arrays;
 
 /**
  * The register panel for users
- * Created by NEOPETS on 03/2/2017.
+ * Authors: Kelvin, Darren, QiuRong, Jonathan
+ * Class: DISM/FT/2B/02
  */
 public class ClientGUIRegister {
     private JPanel registerPanel;

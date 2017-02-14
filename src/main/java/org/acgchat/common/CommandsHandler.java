@@ -7,7 +7,8 @@ import java.util.List;
 
 /**
  * This class handles all the commands.
- * Created by NEOPETS on 12/2/2017.
+ * Authors: Kelvin, Darren, QiuRong, Jonathan
+ * Class: DISM/FT/2B/02
  */
 public class CommandsHandler {
 
@@ -37,6 +38,8 @@ public class CommandsHandler {
         CommandList commandList = new CommandList();
         commands.put("list", commandList);
         commands.put("whoisin", commandList);
+        CommandWhisper commandWhisper = new CommandWhisper();
+        commands.put("whisper", commandWhisper);
         CommandHelp commandHelp = new CommandHelp();
         commands.put("help", commandHelp);
     }

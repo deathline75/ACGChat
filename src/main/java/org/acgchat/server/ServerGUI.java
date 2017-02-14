@@ -20,7 +20,8 @@ import java.util.Date;
 
 /**
  * The GUI version of Server of the chat server.
- * Created by Kelvin on 16/1/2017.
+ * Authors: Kelvin, Darren, QiuRong, Jonathan
+ * Class: DISM/FT/2B/02
  */
 public class ServerGUI {
     private JTextField portTextField;

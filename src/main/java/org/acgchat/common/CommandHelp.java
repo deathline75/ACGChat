@@ -3,7 +3,8 @@ package org.acgchat.common;
 import org.acgchat.server.Server;
 
 /**
- * Created by NEOPETS on 12/2/2017.
+ * Authors: Kelvin, Darren, QiuRong, Jonathan
+ * Class: DISM/FT/2B/02
  */
 public class CommandHelp implements Command{
     @Override

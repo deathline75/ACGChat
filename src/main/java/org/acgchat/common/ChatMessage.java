@@ -4,7 +4,8 @@ import java.io.Serializable;
 
 /**
  * The ChatMessage object to be sent and received
- * Created by Kelvin on 16/1/2017.
+ * Authors: Kelvin, Darren, QiuRong, Jonathan
+ * Class: DISM/FT/2B/02
  */
 public class ChatMessage implements Serializable{
 

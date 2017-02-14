@@ -14,9 +14,10 @@ import java.security.cert.CertificateException;
 import java.util.Date;
 
 /**
- * Created by Kelvin on 16/1/2017.
  * When the client registers or logins from {@link ClientGUIRegister} and {@link ClientGUILogin} respectively,
  * this class object will be created to be the middleman of the GUI and the backend code.
+ * Authors: Kelvin, Darren, QiuRong, Jonathan
+ * Class: DISM/FT/2B/02
  */
 public class ClientGUI {
     private JPanel mainPanel;

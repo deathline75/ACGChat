@@ -18,7 +18,8 @@ import java.util.Scanner;
 
 /**
  * The command-line interface and logic of the client.
- * Created by NEOPETS on 18/1/2017.
+ * Authors: Kelvin, Darren, QiuRong, Jonathan
+ * Class: DISM/FT/2B/02
  */
 public class Client extends Logger {
 
@@ -80,7 +81,7 @@ public class Client extends Logger {
                                 X509Certificate serverCert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(serverCertificate.getCertificateList()[0].getEncoded()));
                                 verifyCertificates(caCertificate, serverCert);
                             } catch (CertificateException e) {
-                                error("Unable to verify server's ceritifcate: " + e);
+                                error("Unable to verify server's certificate: " + e);
                                 e.printStackTrace();
                             }
                         }
