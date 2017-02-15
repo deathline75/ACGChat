@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 /**
  * The register panel for users
@@ -145,11 +146,21 @@ public class ClientGUIRegister {
                 JOptionPane.showConfirmDialog(init, "Please field in all the fields!", "Error",
                         JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE);
             }
+
+            // Check password complexity through regex
+            else if(!String.valueOf(registerPasswordField.getPassword()).matches("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$")){
+                System.out.println(String.valueOf(registerPasswordField.getPassword()));
+                JOptionPane.showConfirmDialog(init, "Invalid password combination! Password requires a combination of letters, capital letters, digit and a special character", "Error",
+                        JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE);
+            }
+
             // Check if password and confirm password match
             else if (!Arrays.equals(registerPasswordField.getPassword(), registerCfmPasswordField.getPassword())) {
                 JOptionPane.showConfirmDialog(init, "Passwords do not match!", "Error",
                         JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE);
-            } else {
+            }
+
+            else {
                 // Initialise all the input values
                 String serverIP = registerServerIPTextField.getText();
                 String username = registerUsernameTextField.getText();

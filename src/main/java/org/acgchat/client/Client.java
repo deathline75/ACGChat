@@ -263,7 +263,14 @@ public class Client extends Logger {
         while (password == null) {
             System.out.print("Enter your password: ");
             password = scan.nextLine();
-            if (!login) {
+
+            // Check password complexity through regex
+            if(!password.matches("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$")){
+               System.out.println("Password requires a combination of letters, capital letters, digit and a special character");
+                password = null;
+            }
+            // Check if we're logged in, if we're not logged in then..
+            else if (!login) {
                 System.out.print("Re-enter your password: ");
                 if (!scan.nextLine().equals(password)) {
                     password = null;
