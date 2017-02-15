@@ -6,11 +6,9 @@ import org.acgchat.common.CommandsHandler;
 import org.acgchat.common.Logger;
 import org.apache.commons.cli.*;
 import org.bouncycastle.asn1.ASN1TaggedObject;
-import org.bouncycastle.crypto.tls.DefaultTlsServer;
-import org.bouncycastle.crypto.tls.DefaultTlsSignerCredentials;
-import org.bouncycastle.crypto.tls.TlsServerProtocol;
-import org.bouncycastle.crypto.tls.TlsSignerCredentials;
+import org.bouncycastle.crypto.tls.*;
 import org.bouncycastle.crypto.util.PrivateKeyFactory;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -45,6 +43,7 @@ import java.util.regex.Pattern;
  */
 public class Server extends Logger {
 
+    private static final int hashIterations = 200000;
     private static int idGenerator = 0;
     private int port;
     private KeyPair keyPair;
@@ -125,6 +124,7 @@ public class Server extends Logger {
      * Start the server.
      */
     protected void start() {
+        Security.addProvider(new BouncyCastleProvider());
         try {
             // Start the socket that will accept connections from clients
             ServerSocket serverSocket = new ServerSocket(port);
@@ -136,17 +136,7 @@ public class Server extends Logger {
                 if (!keepGoing)
                     break;
                 ClientThread newClient = new ClientThread(s);
-                // Check if the initial handshake has no issues
-                if (newClient.running) {
-                    info("Client #" + newClient.getClientThreadId() + " (" + s.getRemoteSocketAddress().toString() + ") has attempted to connect.");
-                    clients.put(newClient.getClientThreadId(), newClient);
-                    loggedIn.put(newClient.getUser(), newClient.getClientThreadId());
-                    newClient.writeMsg(new ChatMessage(ChatMessage.ChatMessageType.MESSAGE, "System", "Type '/help' to see the list of commands"));
-                    newClient.start();
-                    updateCredentialsFile();
-                } else {
-                    newClient.close();
-                }
+                newClient.start();
             }
             // Close all the client threads when keepGoing is false.
             warning("Server is closing...");
@@ -241,15 +231,23 @@ public class Server extends Logger {
             this.ctid = idGenerator++;
             this.socket = socket;
 
+
+        }
+
+        /**
+         * Start running the thread to check for new messages sent from the client.
+         */
+        public void run() {
             try {
                 // Start the TLS handshake with the client
                 final org.bouncycastle.asn1.x509.Certificate bcCert = org.bouncycastle.asn1.x509.Certificate.getInstance(ASN1TaggedObject.fromByteArray(certificate.getEncoded()));
                 tlsServerProtocol = new TlsServerProtocol(socket.getInputStream(), socket.getOutputStream(), new SecureRandom());
-                tlsServerProtocol.accept(new DefaultTlsServer() {
+                DefaultTlsServer defaultTlsServer = new DefaultTlsServer() {
                     protected TlsSignerCredentials getRSASignerCredentials() throws IOException {
                         return new DefaultTlsSignerCredentials(context, new org.bouncycastle.crypto.tls.Certificate(new org.bouncycastle.asn1.x509.Certificate[]{bcCert}), PrivateKeyFactory.createKey(keyPair.getPrivate().getEncoded()));
                     }
-                });
+                };
+                tlsServerProtocol.accept(defaultTlsServer);
 
                 // If the handshake was successful, use the new socket streams to communicate with the clients securely
                 sOutput = new ObjectOutputStream(tlsServerProtocol.getOutputStream());
@@ -268,7 +266,10 @@ public class Server extends Logger {
                                 SecureRandom random = new SecureRandom();
                                 random.nextBytes(salt);
                                 // Hash it with the salt and convert both to Base64 to store inside the credentials file
-                                String hashed = DatatypeConverter.printBase64Binary(hashPassword(((String)chatMessage.getMessage()).toCharArray(), salt, 10000, 512));
+                                long start = System.currentTimeMillis();
+                                String hashed = DatatypeConverter.printBase64Binary(hashPassword(((String)chatMessage.getMessage()).toCharArray(), salt, hashIterations, 512));
+                                long end = System.currentTimeMillis();
+                                debug("Time taken to hash: " + (end-start) + " ms");
                                 String salt64 = DatatypeConverter.printBase64Binary(salt);
 
                                 users.put(chatMessage.getUser(), salt64 + ';' + hashed);
@@ -285,7 +286,7 @@ public class Server extends Logger {
                                 byte[] salt = new byte[16];
                                 SecureRandom random = new SecureRandom();
                                 random.nextBytes(salt);
-                                String hashed = DatatypeConverter.printBase64Binary(hashPassword(((String)chatMessage.getMessage()).toCharArray(), salt, 10000, 512));
+                                String hashed = DatatypeConverter.printBase64Binary(hashPassword(((String)chatMessage.getMessage()).toCharArray(), salt, hashIterations, 512));
                                 String salt64 = DatatypeConverter.printBase64Binary(salt);
                                 warning("Client (" + socket.getRemoteSocketAddress().toString() + ") attempted to create an existing user.");
                                 writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Unable to register username."));
@@ -296,7 +297,11 @@ public class Server extends Logger {
                             if (users.containsKey(chatMessage.getUser()) && !loggedIn.containsKey(chatMessage.getUser())) {
                                 // Attempt to check if the password provided is correct
                                 String[] combo = users.get(chatMessage.getUser()).split(";");
-                                if (Arrays.equals(hashPassword(((String)chatMessage.getMessage()).toCharArray(), DatatypeConverter.parseBase64Binary(combo[0]), 10000, 512), DatatypeConverter.parseBase64Binary(combo[1]))){
+                                long start = System.currentTimeMillis();
+                                byte[] hashedInput = hashPassword(((String)chatMessage.getMessage()).toCharArray(), DatatypeConverter.parseBase64Binary(combo[0]), hashIterations, 512);
+                                long end = System.currentTimeMillis();
+                                debug("Time taken to hash: " + (end-start) + " ms");
+                                if (Arrays.equals(hashedInput, DatatypeConverter.parseBase64Binary(combo[1]))){
                                     // User logs in successfully
                                     user = chatMessage.getUser();
                                     info("Client #" + getClientThreadId() + " has logged in as: " + user);
@@ -305,32 +310,47 @@ public class Server extends Logger {
                                     break;
                                 }
                             } else {
-                                hashPassword(((String)chatMessage.getMessage()).toCharArray(), DatatypeConverter.parseBase64Binary("asdf"), 10000, 512);
+                                hashPassword(((String)chatMessage.getMessage()).toCharArray(), DatatypeConverter.parseBase64Binary("asdf"), hashIterations, 512);
                             }
                             warning("Client (" + socket.getRemoteSocketAddress().toString() + ") supplied wrong credentials when logging in.");
                             writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Invalid username or password!"));
-                            break;
+                            close();
+                            return;
                         default:
                             warning("Client (" + socket.getRemoteSocketAddress().toString() + ") attempted to forge a packet: " + chatMessage.toString());
                             writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Invalid or unsupported message type!"));
+                            close();
+                            return;
                     }
 
                 } catch (ClassNotFoundException e) {
                     writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, "", "Internal error occurred."));
                     e.printStackTrace();
+                    close();
+                    return;
                 }
 
             } catch (IOException | CertificateEncodingException e) {
                 error("Unable to establish secure connection.");
                 e.printStackTrace();
+                close();
+                return;
             }
 
-        }
+            info("Client #" + getClientThreadId() + " (" + socket.getRemoteSocketAddress().toString() + ") has attempted to connect.");
+            clients.put(getClientThreadId(), this);
+            loggedIn.put(getUser(), getClientThreadId());
+            writeMsg(new ChatMessage(ChatMessage.ChatMessageType.MESSAGE, "SYSTEM", "Welcome: " + user + "!"));
+            writeMsg(new ChatMessage(ChatMessage.ChatMessageType.MESSAGE, "SYSTEM", "Type '/help' to see the list of commands"));
+            try {
+                updateCredentialsFile();
+            } catch (IOException e) {
+                error("Unable to update credentials file.");
+                e.printStackTrace();
+                close();
+                return;
+            }
 
-        /**
-         * Start running the thread to check for new messages sent from the client.
-         */
-        public void run() {
             while (running) {
                 try {
                     ChatMessage chatMessage = (ChatMessage) sInput.readObject();
@@ -383,8 +403,11 @@ public class Server extends Logger {
                         e.printStackTrace();
                         break;
                     }
-                }
-                catch (IOException | ClassNotFoundException e) {
+                } catch (EOFException e) {
+                    info("Client #" + getClientThreadId() + " (" + getUser() + ") has disconnected from the server.");
+                    running = false;
+                    break;
+                } catch (IOException | ClassNotFoundException e) {
                     error("Error when receiving a new message: " + e);
                     e.printStackTrace();
                     break;
@@ -416,19 +439,19 @@ public class Server extends Logger {
         public void close() {
             try {
                 sInput.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
             }
             try {
                 sOutput.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
             }
             try {
                 tlsServerProtocol.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
             }
             try {
                 socket.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
             }
         }
 

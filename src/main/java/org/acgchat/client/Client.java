@@ -5,6 +5,7 @@ import org.acgchat.common.Logger;
 import org.apache.commons.cli.*;
 import org.bouncycastle.crypto.tls.*;
 import org.bouncycastle.crypto.tls.Certificate;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -67,6 +68,7 @@ public class Client extends Logger {
      * @return Whether the connection to the server was successful.
      */
     public boolean start() {
+        Security.addProvider(new BouncyCastleProvider());
         info("Connecting to the server...");
         try {
             socket = new Socket(server, port);

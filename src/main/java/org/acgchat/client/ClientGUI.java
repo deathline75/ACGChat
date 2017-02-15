@@ -53,7 +53,7 @@ public class ClientGUI {
 
         // Set the JFrame to render the ClientGUI.
         init.setContentPane(mainPanel);
-        init.setTitle("ACG Chat Client");
+        init.setTitle("ACG Chat Client: " + username);
         init.pack();
 
         if (login)
