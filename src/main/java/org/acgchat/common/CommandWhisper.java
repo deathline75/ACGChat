@@ -24,13 +24,15 @@ public class CommandWhisper implements Command {
 
     @Override
     public boolean execute(Server server, Server.ClientThread clientThread, String[] args) {
-        String userToMsg = args[1];
-        if(server.getLoggedIn().containsKey(userToMsg) && args.length >= 3){
-           Server.ClientThread userToMsgThread = server.getUser(userToMsg);
-           server.debug(userToMsgThread.getUser());
-           userToMsgThread.writeMsg(new ChatMessage(ChatMessage.ChatMessageType.MESSAGE, "*Whisper*" + clientThread.getUser(), concatMsg(args)));
-           return true;
-        };
+        if (args.length >= 3) {
+            String userToMsg = args[1];
+            if(server.getLoggedIn().containsKey(userToMsg)){
+                Server.ClientThread userToMsgThread = server.getUser(userToMsg);
+                clientThread.writeMsg(new ChatMessage(ChatMessage.ChatMessageType.MESSAGE, "{Whisper} You >> " + userToMsg, concatMsg(args)));
+                userToMsgThread.writeMsg(new ChatMessage(ChatMessage.ChatMessageType.MESSAGE, "{Whisper} " + clientThread.getUser() + " >> You", concatMsg(args)));
+                return true;
+            }
+        }
         return false;
     }
 
