@@ -34,6 +34,7 @@ public class Client extends Logger {
     private boolean login;
     private String username;
     private String password;
+    public static final String regexPassword = "^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[!@#$%^&*'\":;,./<>?|`~+=]).{8,}$";
 
     /**
      * The client that will handle the connection
@@ -265,8 +266,8 @@ public class Client extends Logger {
             password = scan.nextLine();
 
             // Check password complexity through regex
-            if(!password.matches("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$")){
-               System.out.println("Password requires a combination of letters, capital letters, digit and a special character");
+            if(!password.matches(regexPassword)){
+               System.out.println("Password requires a combination of letters, digit and a special character");
                 password = null;
             }
             // Check if we're logged in, if we're not logged in then..

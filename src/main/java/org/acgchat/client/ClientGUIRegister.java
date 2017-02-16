@@ -148,8 +148,8 @@ public class ClientGUIRegister {
             }
 
             // Check password complexity through regex
-            else if(!String.valueOf(registerPasswordField.getPassword()).matches("^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[@#$%^&+=]).{8,}$")){
-                JOptionPane.showConfirmDialog(init, "Invalid password combination! Password requires a combination of letters, capital letters, digit and a special character", "Error",
+            else if(!String.valueOf(registerPasswordField.getPassword()).matches(Client.regexPassword)){
+                JOptionPane.showConfirmDialog(init, "Invalid password combination! Password requires a combination of letters, digit and a special character", "Error",
                         JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE);
             }
 
