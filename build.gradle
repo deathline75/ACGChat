@@ -1,5 +1,5 @@
 group 'org.acgchat'
-version '1.0-SNAPSHOT'
+version '1.0'
 
 apply plugin: 'java'
 apply plugin: 'gradle-one-jar'
@@ -20,6 +20,8 @@ buildscript {
     }
 }
 
+defaultTasks 'clean', 'clientJar', 'clientGUIJar', 'serverJar', 'serverGUIJar', 'copyJarOut'
+
 task clientJar(type: OneJar) {
     mainClass = 'org.acgchat.client.Client'
     archiveName = 'ACGChat-' + version + '-client.jar'
@@ -35,6 +37,14 @@ task serverJar(type: OneJar) {
 task serverGUIJar(type: OneJar) {
     mainClass = 'org.acgchat.server.ServerGUI'
     archiveName = 'ACGChat-' + version + '-servergui.jar'
+}
+task copyJarOut {
+    doLast{
+        copy {
+            from 'build/libs/.'
+            into '.'
+        }
+    }
 }
 
 dependencies {
