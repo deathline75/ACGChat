@@ -118,9 +118,12 @@ public class ClientGUI {
         messageTextField.setText("");
         mainPanel.add(messageTextField, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JScrollPane scrollPane1 = new JScrollPane();
+        scrollPane1.setHorizontalScrollBarPolicy(31);
         mainPanel.add(scrollPane1, new GridConstraints(2, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(650, 350), null, 0, false));
         messagesTextArea = new JTextArea();
         messagesTextArea.setEditable(false);
+        messagesTextArea.setLineWrap(true);
+        messagesTextArea.setWrapStyleWord(true);
         scrollPane1.setViewportView(messagesTextArea);
         sendButton = new JButton();
         sendButton.setEnabled(false);

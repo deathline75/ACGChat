@@ -33,7 +33,8 @@ public class ClientGUIRegister {
 
     /**
      * Initialize the login panel
-     * @param init The {@link JFrame} that holds all the JPanels. Used for switching the JPanels.
+     *
+     * @param init       The {@link JFrame} that holds all the JPanels. Used for switching the JPanels.
      * @param loginPanel The {@link ClientGUILogin} object to switch back to if needed.
      */
     public ClientGUIRegister(final JFrame init, final ClientGUILogin loginPanel) {
@@ -62,6 +63,7 @@ public class ClientGUIRegister {
 
     /**
      * Get the register panel
+     *
      * @return The register panel
      */
     public JPanel getRegisterPanel() {
@@ -148,7 +150,7 @@ public class ClientGUIRegister {
             }
 
             // Check password complexity through regex
-            else if(!String.valueOf(registerPasswordField.getPassword()).matches(Client.regexPassword)){
+            else if (!String.valueOf(registerPasswordField.getPassword()).matches(Client.regexPassword)) {
                 JOptionPane.showConfirmDialog(init, "Invalid password combination! Password requires a combination of letters, digit and a special character", "Error",
                         JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE);
             }
@@ -157,9 +159,7 @@ public class ClientGUIRegister {
             else if (!Arrays.equals(registerPasswordField.getPassword(), registerCfmPasswordField.getPassword())) {
                 JOptionPane.showConfirmDialog(init, "Passwords do not match!", "Error",
                         JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE);
-            }
-
-            else {
+            } else {
                 // Initialise all the input values
                 String serverIP = registerServerIPTextField.getText();
                 String username = registerUsernameTextField.getText();

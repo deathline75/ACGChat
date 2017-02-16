@@ -77,6 +77,7 @@ public class ServerGUI {
 
     /**
      * Sets the fields and buttons of the GUI to enabled or disabled
+     *
      * @param state the state of the buttons and fields
      */
     private void setFieldStates(boolean state) {
@@ -170,9 +171,12 @@ public class ServerGUI {
         mainPanel.add(panel7, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         panel7.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Chat", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, new Font(panel7.getFont().getName(), panel7.getFont().getStyle(), panel7.getFont().getSize()), new Color(-16777216)));
         final JScrollPane scrollPane1 = new JScrollPane();
+        scrollPane1.setHorizontalScrollBarPolicy(31);
         panel7.add(scrollPane1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(600, 350), null, 0, false));
         chatTextArea = new JTextArea();
         chatTextArea.setEditable(false);
+        chatTextArea.setLineWrap(true);
+        chatTextArea.setWrapStyleWord(true);
         scrollPane1.setViewportView(chatTextArea);
         final JPanel panel8 = new JPanel();
         panel8.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
@@ -212,16 +216,17 @@ public class ServerGUI {
 
         /**
          * Initialise the ServerGUIObject
-         * @param port The port number to start the server on
-         * @param credentialPath The path to the credentials file for users
-         * @param keystorePath The path the the keystore where the private keys are located at.
+         *
+         * @param port             The port number to start the server on
+         * @param credentialPath   The path to the credentials file for users
+         * @param keystorePath     The path the the keystore where the private keys are located at.
          * @param keystorePassword The password of the keystore.
-         * @param alias The alias of the server's private key
-         * @param aliasPassword The password of the alias
-         * @throws IOException When any file cannot be read or written to properly
-         * @throws KeyStoreException When the keystore cannot be initialized properly
-         * @throws CertificateException When the certificate cannot be initialized properly from the keystore
-         * @throws NoSuchAlgorithmException When the algorithm used is not found
+         * @param alias            The alias of the server's private key
+         * @param aliasPassword    The password of the alias
+         * @throws IOException               When any file cannot be read or written to properly
+         * @throws KeyStoreException         When the keystore cannot be initialized properly
+         * @throws CertificateException      When the certificate cannot be initialized properly from the keystore
+         * @throws NoSuchAlgorithmException  When the algorithm used is not found
          * @throws UnrecoverableKeyException When the key is stuck in a false vacuum
          */
         protected ServerGUIObject(int port, String credentialPath, String keystorePath, String keystorePassword, String alias, String aliasPassword) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
