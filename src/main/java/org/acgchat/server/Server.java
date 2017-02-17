@@ -14,15 +14,12 @@ import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.xml.bind.DatatypeConverter;
-import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
-import java.nio.file.StandardOpenOption;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -35,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.security.cert.Certificate;
 
 /**
  * The command-line interface and logic of the server.
@@ -243,11 +241,22 @@ public class Server extends Logger {
                 final org.bouncycastle.asn1.x509.Certificate bcCert = org.bouncycastle.asn1.x509.Certificate.getInstance(ASN1TaggedObject.fromByteArray(certificate.getEncoded()));
                 tlsServerProtocol = new TlsServerProtocol(socket.getInputStream(), socket.getOutputStream(), new SecureRandom());
                 DefaultTlsServer defaultTlsServer = new DefaultTlsServer() {
+
+                    protected ProtocolVersion getMaximumVersion() {
+                        return ProtocolVersion.TLSv12;
+                    }
+
                     protected TlsSignerCredentials getRSASignerCredentials() throws IOException {
-                        return new DefaultTlsSignerCredentials(context, new org.bouncycastle.crypto.tls.Certificate(new org.bouncycastle.asn1.x509.Certificate[]{bcCert}), PrivateKeyFactory.createKey(keyPair.getPrivate().getEncoded()));
+                        SignatureAndHashAlgorithm signatureAndHashAlgorithm = (SignatureAndHashAlgorithm) TlsUtils.getDefaultRSASignatureAlgorithms().get(0);
+                        return new DefaultTlsSignerCredentials(context,
+                                new org.bouncycastle.crypto.tls.Certificate(new org.bouncycastle.asn1.x509.Certificate[]{bcCert}),
+                                PrivateKeyFactory.createKey(keyPair.getPrivate().getEncoded()),
+                                signatureAndHashAlgorithm);
                     }
                 };
                 tlsServerProtocol.accept(defaultTlsServer);
+                // See: https://www.bouncycastle.org/docs/tlsdocs1.5on/constant-values.html#org.bouncycastle.tls.CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                debug(String.format("Selected Cipher: %d (0x%x)", defaultTlsServer.getSelectedCipherSuite(), defaultTlsServer.getSelectedCipherSuite()));
 
                 // If the handshake was successful, use the new socket streams to communicate with the clients securely
                 sOutput = new ObjectOutputStream(tlsServerProtocol.getOutputStream());
@@ -395,7 +404,7 @@ public class Server extends Logger {
                             writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Invalid or unsupported message type!"));
                     }
                 } catch (SocketException e)  {
-                    if (e.getMessage().startsWith("Connection reset by peer")) {
+                    if (e.getMessage().startsWith("Connection reset by peer") || e.getMessage().startsWith("Socket closed")) {
                         info("Client #" + getClientThreadId() + " (" + getUser() + ") has disconnected from the server.");
                         running = false;
                     } else {

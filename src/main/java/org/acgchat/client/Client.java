@@ -4,14 +4,13 @@ import org.acgchat.common.ChatMessage;
 import org.acgchat.common.Logger;
 import org.apache.commons.cli.*;
 import org.bouncycastle.crypto.tls.*;
-import org.bouncycastle.crypto.tls.Certificate;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
 import java.io.*;
 import java.net.Socket;
-import java.security.*;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.Security;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -77,6 +76,7 @@ public class Client extends Logger {
             tlsClientProtocol = new TlsClientProtocol(socket.getInputStream(), socket.getOutputStream(), new SecureRandom());
             // Initialise the TLS connection
             tlsClientProtocol.connect(new DefaultTlsClient() {
+
                 public TlsAuthentication getAuthentication() throws IOException {
                     return new ServerOnlyTlsAuthentication() {
                         public void notifyServerCertificate(Certificate serverCertificate) throws IOException {
