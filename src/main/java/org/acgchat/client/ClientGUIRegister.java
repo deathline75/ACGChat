@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
-import java.util.regex.Pattern;
 
 /**
  * The register panel for users
