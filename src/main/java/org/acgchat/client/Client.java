@@ -77,6 +77,7 @@ public class Client extends Logger {
             tlsClientProtocol = new TlsClientProtocol(socket.getInputStream(), socket.getOutputStream(), new SecureRandom());
             // Initialise the TLS connection
             tlsClientProtocol.connect(new DefaultTlsClient() {
+
                 public TlsAuthentication getAuthentication() throws IOException {
                     return new ServerOnlyTlsAuthentication() {
                         public void notifyServerCertificate(Certificate serverCertificate) throws IOException {

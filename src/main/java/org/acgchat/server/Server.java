@@ -243,11 +243,22 @@ public class Server extends Logger {
                 final org.bouncycastle.asn1.x509.Certificate bcCert = org.bouncycastle.asn1.x509.Certificate.getInstance(ASN1TaggedObject.fromByteArray(certificate.getEncoded()));
                 tlsServerProtocol = new TlsServerProtocol(socket.getInputStream(), socket.getOutputStream(), new SecureRandom());
                 DefaultTlsServer defaultTlsServer = new DefaultTlsServer() {
+
+                    protected ProtocolVersion getMaximumVersion() {
+                        return ProtocolVersion.TLSv12;
+                    }
+
                     protected TlsSignerCredentials getRSASignerCredentials() throws IOException {
-                        return new DefaultTlsSignerCredentials(context, new org.bouncycastle.crypto.tls.Certificate(new org.bouncycastle.asn1.x509.Certificate[]{bcCert}), PrivateKeyFactory.createKey(keyPair.getPrivate().getEncoded()));
+                        SignatureAndHashAlgorithm signatureAndHashAlgorithm = (SignatureAndHashAlgorithm) TlsUtils.getDefaultRSASignatureAlgorithms().get(0);
+                        return new DefaultTlsSignerCredentials(context,
+                                new org.bouncycastle.crypto.tls.Certificate(new org.bouncycastle.asn1.x509.Certificate[]{bcCert}),
+                                PrivateKeyFactory.createKey(keyPair.getPrivate().getEncoded()),
+                                signatureAndHashAlgorithm);
                     }
                 };
                 tlsServerProtocol.accept(defaultTlsServer);
+                // See: https://www.bouncycastle.org/docs/tlsdocs1.5on/constant-values.html#org.bouncycastle.tls.CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                debug(String.format("Selected Cipher: %d (0x%x)", defaultTlsServer.getSelectedCipherSuite(), defaultTlsServer.getSelectedCipherSuite()));
 
                 // If the handshake was successful, use the new socket streams to communicate with the clients securely
                 sOutput = new ObjectOutputStream(tlsServerProtocol.getOutputStream());
