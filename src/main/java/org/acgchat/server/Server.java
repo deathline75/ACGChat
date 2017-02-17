@@ -14,15 +14,12 @@ import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.xml.bind.DatatypeConverter;
-import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
-import java.nio.file.StandardOpenOption;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -35,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.security.cert.Certificate;
 
 /**
  * The command-line interface and logic of the server.
@@ -406,7 +404,7 @@ public class Server extends Logger {
                             writeMsg(new ChatMessage(ChatMessage.ChatMessageType.ERROR, chatMessage.getUser(), "Invalid or unsupported message type!"));
                     }
                 } catch (SocketException e)  {
-                    if (e.getMessage().startsWith("Connection reset by peer")) {
+                    if (e.getMessage().startsWith("Connection reset by peer") || e.getMessage().startsWith("Socket closed")) {
                         info("Client #" + getClientThreadId() + " (" + getUser() + ") has disconnected from the server.");
                         running = false;
                     } else {

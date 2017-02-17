@@ -248,13 +248,17 @@
                 <preferred-size width="600" height="350"/>
               </grid>
             </constraints>
-            <properties/>
+            <properties>
+              <horizontalScrollBarPolicy value="31"/>
+            </properties>
             <border type="none"/>
             <children>
               <component id="191e7" class="javax.swing.JTextArea" binding="consoleTextArea">
                 <constraints/>
                 <properties>
                   <editable value="false"/>
+                  <lineWrap value="true"/>
+                  <wrapStyleWord value="true"/>
                 </properties>
               </component>
             </children>
